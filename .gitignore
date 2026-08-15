@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Xcode / Swift Playgrounds user data
+.build/
+*.build/
+*.xcuserstate
+xcuserdata/
+DerivedData/
+.swiftpm/xcode/xcuserdata/
+
+# Keep the main code package and distribution zip
+!PutIT.swiftpm
+!PutIT.swiftpm.zip
+
+.tmp.driveupload/
