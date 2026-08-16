@@ -86,7 +86,7 @@ struct OnDeviceVisionService: Sendable {
                 print("Global Vision error: \(error)")
             }
             
-            // 4. Crop focused salient object (The Wallet/Object under the pin) and run 1,300+ Taxonomy directly on it!
+            // 4. Crop focused salient object (The item under the pin) and run classification
             if let cropBox = salientCropRect {
                 let imgW = CGFloat(cgImage.width)
                 let imgH = CGFloat(cgImage.height)
@@ -128,27 +128,26 @@ struct OnDeviceVisionService: Sendable {
         recognizedTexts: [String],
         autoPinPoint: CGPoint?
     ) -> ImageRecognitionResult {
-        let combinedText = recognizedTexts.joined(separator: " ").lowercased()
         var candidateScores: [String: (confidence: Double, score: Double, suggestion: PredictedItemSuggestion)] = [:]
         
-        // Filter out broad generic scene noise like "indoor", "room", "floor", "table", "black"
+        // Filter out broad generic scene noise
         let sceneNoiseIdentifiers = [
             "indoor", "room", "furniture", "table", "floor", "desk", "black", "surface",
             "wood", "material", "lighting", "wall", "ceiling", "home", "building", "horizontal", "nobody",
             "structure", "structural", "structural_element", "construction", "indoor_space", "room_interior",
-            "architecture", "architectural"
+            "architecture", "architectural", "abstract", "shape", "color", "shadow", "outdoors", "outside"
         ]
         
         // 1. Process Cropped Observations (Weight 3.0x - directly from the object under the pin)
-        for obs in croppedObservations.prefix(25) {
+        for obs in croppedObservations.prefix(35) {
             let id = obs.identifier.lowercased()
             if sceneNoiseIdentifiers.contains(where: { id == $0 || id.contains($0) }) { continue }
-            if obs.confidence < 0.02 { continue }
+            if obs.confidence < 0.005 { continue }
             
             let (displayName, category, icon, room, container) = mapAppleIdentifierToHumanName(id)
             let rawConf = Double(obs.confidence)
-            let dynamicConf = min(max(rawConf * 2.5 + 0.45, 0.60), 0.95)
-            let score = rawConf * 3.0
+            let dynamicConf = min(max(rawConf * 2.5 + 0.55, 0.65), 0.96)
+            let score = rawConf * 3.0 + 1.0
             
             let suggestion = PredictedItemSuggestion(
                 name: displayName,
@@ -167,15 +166,15 @@ struct OnDeviceVisionService: Sendable {
             }
         }
         
-        // 2. Process Full Image Observations (Weight 1.0x - captures context like tubes, brushes)
-        for obs in fullObservations.prefix(25) {
+        // 2. Process Full Image Observations (Weight 1.0x)
+        for obs in fullObservations.prefix(35) {
             let id = obs.identifier.lowercased()
             if sceneNoiseIdentifiers.contains(where: { id == $0 || id.contains($0) }) { continue }
-            if obs.confidence < 0.03 { continue }
+            if obs.confidence < 0.005 { continue }
             
             let (displayName, category, icon, room, container) = mapAppleIdentifierToHumanName(id)
             let rawConf = Double(obs.confidence)
-            let dynamicConf = min(max(rawConf * 2.0 + 0.35, 0.50), 0.90)
+            let dynamicConf = min(max(rawConf * 2.0 + 0.45, 0.55), 0.92)
             let score = rawConf * 1.0
             
             let suggestion = PredictedItemSuggestion(
@@ -195,36 +194,13 @@ struct OnDeviceVisionService: Sendable {
             }
         }
         
-        // 3. OCR Text Clues (Boosts specific brands if visible)
-        if combinedText.contains("jacob") || combinedText.contains("wallet") {
-            let item = PredictedItemSuggestion(
-                name: "กระเป๋าสตางค์ (Wallet)", category: "Valuables", tags: ["wallet", "leather", "กระเป๋าเงิน"],
-                confidence: 0.95, icon: "wallet.bifold.fill", roomSuggestion: "🛋️ ห้องนั่งเล่น", containerSuggestion: "โต๊ะทำงาน / ลิ้นชัก"
-            )
-            candidateScores[item.name] = (0.95, 10.0, item)
-        }
-        if combinedText.contains("mizumi") || combinedText.contains("acne") || combinedText.contains("gel") || combinedText.contains("serum") {
-            let item = PredictedItemSuggestion(
-                name: "หลอดเจล / สกินแคร์ (Skincare Gel)", category: "General", tags: ["skincare", "gel", "lotion", "ครีม", "mizumi"],
-                confidence: 0.92, icon: "sparkles", roomSuggestion: "🛏️ ห้องนอนใหญ่", containerSuggestion: "โต๊ะเครื่องแป้ง"
-            )
-            candidateScores[item.name] = (0.92, 9.5, item)
-        }
-        if combinedText.contains("passport") || combinedText.contains("thai") {
-            let item = PredictedItemSuggestion(
-                name: "หนังสือเดินทาง (Passport)", category: "Documents", tags: ["travel", "passport", "visa", "พาสปอร์ต"],
-                confidence: 0.96, icon: "person.text.rectangle.fill", roomSuggestion: "🛏️ ห้องนอนใหญ่", containerSuggestion: "ตู้เซฟนิรภัย"
-            )
-            candidateScores[item.name] = (0.96, 10.0, item)
-        }
-        
         // Fallback default candidates if empty
         if candidateScores.isEmpty {
             let def = PredictedItemSuggestion(
-                name: "กระเป๋าสตางค์ (Wallet)", category: "Valuables", tags: ["wallet", "กระเป๋าเงิน"],
-                confidence: 0.85, icon: "wallet.bifold.fill", roomSuggestion: "🛋️ ห้องนั่งเล่น", containerSuggestion: "โต๊ะทำงาน"
+                name: "สิ่งของทั่วไป (Item)", category: "General", tags: ["item", "สิ่งของ"],
+                confidence: 0.75, icon: "tag.fill", roomSuggestion: "ห้องนั่งเล่น", containerSuggestion: "โต๊ะทำงาน"
             )
-            candidateScores[def.name] = (0.85, 5.0, def)
+            candidateScores[def.name] = (0.75, 1.0, def)
         }
         
         // Sort candidates by highest score
@@ -232,7 +208,7 @@ struct OnDeviceVisionService: Sendable {
         let top4 = Array(sorted.prefix(4))
         let primary = top4.first!
         
-        let caption = "🧠 Apple Vision ตรวจพบ: \(primary.name) (\(Int(primary.confidence * 100))%)"
+        let caption = "Apple Vision ตรวจพบ: \(primary.name) (\(Int(primary.confidence * 100))%)"
         
         return ImageRecognitionResult(
             primaryCaption: caption,
@@ -247,109 +223,136 @@ struct OnDeviceVisionService: Sendable {
     private static func mapAppleIdentifierToHumanName(_ identifier: String) -> (name: String, category: String, icon: String, room: String, container: String) {
         let id = identifier.lowercased()
         
-        // 1. Wallets, Purses, Leather Goods
-        if id.contains("wallet") || id.contains("billfold") || id.contains("coin_purse") || id.contains("moneybag") || id.contains("pocketbook") || id.contains("cardholder") || id.contains("clutch") {
-            return ("กระเป๋าสตางค์ (Wallet)", "Valuables", "wallet.bifold.fill", "🛋️ ห้องนั่งเล่น", "โต๊ะทำงาน / ลิ้นชัก")
+        // 1. Electronics & Computing
+        if id.contains("mouse") || id.contains("trackball") || id.contains("touchpad") || id.contains("pointing_device") {
+            return ("เมาส์ (Mouse)", "Electronics", "computermouse.fill", "ห้องทำงาน", "โต๊ะทำงาน")
         }
-        if id.contains("leather") || id.contains("pouch") || id.contains("case") || id.contains("holder") {
-            return ("กระเป๋าหนัง / ซองเก็บของ (Pouch)", "Valuables", "archivebox.fill", "🛋️ ห้องนั่งเล่น", "โต๊ะทำงาน")
-        }
-        
-        // 2. Cosmetics, Tubes, Skincare & Medicines
-        if id.contains("tube") || id.contains("ointment") || id.contains("cream") || id.contains("lotion") || id.contains("sunscreen") || id.contains("cosmetic") || id.contains("moisturizer") || id.contains("gel") || id.contains("cleanser") || id.contains("sunblock") {
-            return ("หลอดครีม / สกินแคร์ (Skincare Tube)", "General", "sparkles", "🛏️ ห้องนอนใหญ่", "โต๊ะเครื่องแป้ง")
-        }
-        if id.contains("pill") || id.contains("medicine") || id.contains("drug") || id.contains("pharmaceutical") || id.contains("capsule") || id.contains("syrup") || id.contains("first_aid") || id.contains("bandage") {
-            return ("ยาสามัญ / กล่องยา (Medicine)", "Medicines", "cross.case.fill", "🍳 ห้องครัว", "ตู้ยาสามัญประจำบ้าน")
-        }
-        if id.contains("perfume") || id.contains("fragrance") || id.contains("spray") || id.contains("deodorant") {
-            return ("น้ำหอม / สเปรย์ (Perfume)", "General", "sparkles", "🛏️ ห้องนอนใหญ่", "โต๊ะเครื่องแป้ง")
-        }
-        
-        // 3. Grooming & Personal Accessories
-        if id.contains("comb") || id.contains("hairbrush") || id.contains("brush") {
-            return ("หวี / แปรงผม (Comb / Brush)", "General", "comb.fill", "🛏️ ห้องนอนใหญ่", "โต๊ะเครื่องแป้ง")
-        }
-        if id.contains("spectacles") || id.contains("sunglasses") || id.contains("glasses") || id.contains("eyewear") || id.contains("goggles") {
-            return ("แว่นตา / แว่นกันแดด (Glasses)", "General", "eyeglasses", "🛏️ ห้องนอนใหญ่", "โต๊ะข้างเตียง")
-        }
-        if id.contains("watch") || id.contains("wristwatch") || id.contains("timepiece") || id.contains("chronometer") {
-            return ("นาฬิกาข้อมือ (Watch)", "Valuables", "watch.analog", "🛏️ ห้องนอนใหญ่", "โต๊ะข้างเตียง")
-        }
-        if id.contains("jewelry") || id.contains("necklace") || id.contains("ring") || id.contains("bracelet") || id.contains("earring") {
-            return ("เครื่องประดับ / แหวน (Jewelry)", "Valuables", "sparkles", "🛏️ ห้องนอนใหญ่", "กล่องกำมะหยี่ในตู้เซฟ")
-        }
-        
-        // 4. Keys, Locks, Remotes & Access
-        if id.contains("key") || id.contains("keychain") || id.contains("keyring") || id.contains("padlock") || id.contains("lock") || id.contains("latch") {
-            return ("กุญแจ / พวงกุญแจ (Key)", "Keys & Access", "key.fill", "🛋️ ห้องนั่งเล่น", "ลิ้นชักชั้นวางทีวี")
-        }
-        if id.contains("remote") || id.contains("clicker") || id.contains("fob") || id.contains("transmitter") {
-            return ("รีโมท / กุญแจรถ (Remote/Car Key)", "Keys & Access", "car.fill", "🚪 หน้าบ้าน", "ถาดไม้วางของหน้าบ้าน")
-        }
-        if id.contains("card") || id.contains("badge") || id.contains("passport") || id.contains("visa") || id.contains("document") || id.contains("certificate") {
-            return ("เอกสาร / บัตรสำคัญ (Document/ID)", "Documents", "person.text.rectangle.fill", "🛏️ ห้องนอนใหญ่", "ตู้เซฟนิรภัย")
-        }
-        
-        // 5. Electronics & Gadgets
-        if id.contains("headphone") || id.contains("earphone") || id.contains("airpod") || id.contains("earbud") || id.contains("headset") {
-            return ("หูฟัง (Headphones / AirPods)", "Electronics", "headphones", "💼 ห้องทำงาน", "โต๊ะทำงาน")
-        }
-        if id.contains("charger") || id.contains("cable") || id.contains("cord") || id.contains("adapter") || id.contains("powerbank") || id.contains("usb") {
-            return ("สายชาร์จ / Powerbank (Charger)", "Electronics", "bolt.fill", "💼 ห้องทำงาน", "กล่องจัดระเบียบสายไฟ")
-        }
-        if id.contains("game") || id.contains("controller") || id.contains("joystick") || id.contains("gamepad") || id.contains("console") {
-            return ("เครื่องเล่นเกม / จอย (Game)", "Electronics", "gamecontroller.fill", "🛋️ ห้องนั่งเล่น", "ชั้นวางคอนโซลทีวี")
-        }
-        if id.contains("keyboard") || id.contains("typewriter") || id.contains("keypad") {
-            return ("คีย์บอร์ด (Keyboard)", "Electronics", "keyboard.fill", "💼 ห้องทำงาน", "โต๊ะทำงาน")
-        }
-        if id.contains("mouse") || id.contains("trackball") || id.contains("mousepad") {
-            return ("เมาส์ (Mouse)", "Electronics", "computermouse.fill", "💼 ห้องทำงาน", "โต๊ะทำงาน")
+        if id.contains("keyboard") || id.contains("keypad") || id.contains("typewriter") {
+            return ("คีย์บอร์ด (Keyboard)", "Electronics", "keyboard.fill", "ห้องทำงาน", "โต๊ะทำงาน")
         }
         if id.contains("laptop") || id.contains("notebook") || id.contains("macbook") || id.contains("computer") {
-            return ("โน้ตบุ๊กคอมพิวเตอร์ (Laptop)", "Electronics", "laptopcomputer", "💼 ห้องทำงาน", "โต๊ะทำงาน")
+            return ("โน้ตบุ๊ก (Laptop)", "Electronics", "laptopcomputer", "ห้องทำงาน", "โต๊ะทำงาน")
         }
-        if id.contains("phone") || id.contains("telephone") || id.contains("smartphone") || id.contains("iphone") || id.contains("cellular") {
-            return ("สมาร์ทโฟน (Phone)", "Electronics", "iphone", "🛋️ ห้องนั่งเล่น", "โต๊ะกลาง")
+        if id.contains("tablet") || id.contains("ipad") || id.contains("screen") || id.contains("display") || id.contains("monitor") {
+            return ("แท็บเล็ต / จอภาพ (Tablet/Screen)", "Electronics", "ipad", "ห้องทำงาน", "โต๊ะทำงาน")
+        }
+        if id.contains("phone") || id.contains("smartphone") || id.contains("iphone") || id.contains("cellular") || id.contains("mobile") {
+            return ("โทรศัพท์มือถือ (Phone)", "Electronics", "iphone", "ห้องนั่งเล่น", "โต๊ะกลาง")
+        }
+        if id.contains("headphone") || id.contains("earphone") || id.contains("airpod") || id.contains("earbud") || id.contains("headset") {
+            return ("หูฟัง (Headphones / Earphones)", "Electronics", "headphones", "ห้องทำงาน", "โต๊ะทำงาน")
+        }
+        if id.contains("charger") || id.contains("cable") || id.contains("cord") || id.contains("adapter") || id.contains("powerbank") || id.contains("usb") || id.contains("plug") {
+            return ("สายชาร์จ / Powerbank (Charger)", "Electronics", "bolt.fill", "ห้องทำงาน", "กล่องจัดระเบียบ")
+        }
+        if id.contains("game") || id.contains("controller") || id.contains("joystick") || id.contains("gamepad") || id.contains("console") || id.contains("nintendo") || id.contains("playstation") {
+            return ("เครื่องเล่นเกม / จอย (Gaming)", "Electronics", "gamecontroller.fill", "ห้องนั่งเล่น", "ชั้นวางทีวี")
+        }
+        if id.contains("remote") || id.contains("clicker") || id.contains("transmitter") {
+            return ("รีโมท (Remote Control)", "Electronics", "appletvremote.gen4.fill", "ห้องนั่งเล่น", "โต๊ะกลาง")
         }
         
-        // 6. Tools, Stationery & Bags
-        if id.contains("tool") || id.contains("screwdriver") || id.contains("wrench") || id.contains("hammer") || id.contains("pliers") || id.contains("drill") {
-            return ("เครื่องมือช่าง (Tool)", "Tools", "wrench.adjustable.fill", "🚗 โรงรถ", "กล่องเครื่องมือช่าง")
+        // 2. Wallets, Keys & Valuables
+        if id.contains("wallet") || id.contains("billfold") || id.contains("purse") || id.contains("moneybag") || id.contains("pocketbook") || id.contains("cardholder") || id.contains("clutch") {
+            return ("กระเป๋าสตางค์ (Wallet)", "Valuables", "wallet.bifold.fill", "ห้องนั่งเล่น", "โต๊ะทำงาน / ลิ้นชัก")
         }
-        if id.contains("pen") || id.contains("pencil") || id.contains("scissors") || id.contains("cutter") || id.contains("stationery") || id.contains("marker") {
-            return ("เครื่องเขียน / กรรไกร (Stationery)", "Tools", "scissors", "💼 ห้องทำงาน", "กล่องเครื่องเขียน")
+        if id.contains("key") || id.contains("keychain") || id.contains("keyring") || id.contains("fob") {
+            return ("กุญแจ / พวงกุญแจ (Key)", "Keys & Access", "key.fill", "หน้าบ้าน", "ที่แขวนผนัง")
         }
-        if id.contains("bag") || id.contains("backpack") || id.contains("suitcase") || id.contains("luggage") || id.contains("briefcase") || id.contains("handbag") {
-            return ("กระเป๋า / กระเป๋าเป้ (Bag)", "General", "bag.fill", "🛏️ ห้องนอนใหญ่", "ตู้เสื้อผ้า")
+        if id.contains("lock") || id.contains("padlock") || id.contains("latch") {
+            return ("แม่กุญแจ / ล็อก (Lock)", "Keys & Access", "lock.fill", "หน้าบ้าน", "กล่องเก็บกุญแจ")
         }
-        if id.contains("bottle") || id.contains("tumbler") || id.contains("cup") || id.contains("mug") || id.contains("flask") || id.contains("glass") {
-            return ("แก้วน้ำ / กระติกน้ำ (Tumbler/Bottle)", "General", "cup.and.saucer.fill", "🍳 ห้องครัว", "เคาน์เตอร์ครัว")
+        if id.contains("watch") || id.contains("wristwatch") || id.contains("timepiece") {
+            return ("นาฬิกาข้อมือ (Watch)", "Valuables", "watch.analog", "ห้องนอนใหญ่", "โต๊ะข้างเตียง")
+        }
+        if id.contains("spectacles") || id.contains("sunglasses") || id.contains("glasses") || id.contains("eyewear") {
+            return ("แว่นตา / แว่นกันแดด (Glasses)", "General", "eyeglasses", "ห้องนอนใหญ่", "โต๊ะข้างเตียง")
+        }
+        if id.contains("jewelry") || id.contains("necklace") || id.contains("ring") || id.contains("bracelet") || id.contains("earring") {
+            return ("เครื่องประดับ / แหวน (Jewelry)", "Valuables", "sparkles", "ห้องนอนใหญ่", "ตู้เซฟ")
+        }
+        
+        // 3. Skincare, Cosmetics & Medicines
+        if id.contains("tube") || id.contains("ointment") || id.contains("cream") || id.contains("lotion") || id.contains("sunscreen") || id.contains("cosmetic") || id.contains("serum") || id.contains("gel") {
+            return ("หลอดครีม / โลชั่น (Lotion/Cream)", "General", "sparkles", "ห้องนอนใหญ่", "โต๊ะเครื่องแป้ง")
+        }
+        if id.contains("pill") || id.contains("medicine") || id.contains("drug") || id.contains("capsule") || id.contains("syrup") || id.contains("bandage") || id.contains("first_aid") {
+            return ("ยาสามัญ / วิตามิน (Medicine)", "Medicines", "cross.case.fill", "ห้องครัว", "ตู้ยา")
+        }
+        if id.contains("perfume") || id.contains("fragrance") || id.contains("spray") || id.contains("deodorant") {
+            return ("น้ำหอม / สเปรย์ (Perfume)", "General", "sparkles", "ห้องนอนใหญ่", "โต๊ะเครื่องแป้ง")
+        }
+        if id.contains("comb") || id.contains("hairbrush") || id.contains("brush") {
+            return ("หวี / แปรงผม (Comb/Brush)", "General", "comb.fill", "ห้องนอนใหญ่", "โต๊ะเครื่องแป้ง")
+        }
+        if id.contains("towel") || id.contains("tissue") || id.contains("napkin") {
+            return ("ผ้าขนหนู / กระดาษ (Towel/Tissue)", "General", "square.fill", "ห้องน้ำ", "ราวแขวน")
+        }
+        
+        // 4. Documents, Books & Stationery
+        if id.contains("passport") || id.contains("visa") || id.contains("document") || id.contains("certificate") || id.contains("paper") {
+            return ("หนังสือเดินทาง / เอกสาร (Passport/Document)", "Documents", "doc.text.fill", "ห้องนอนใหญ่", "ตู้เซฟ")
+        }
+        if id.contains("book") || id.contains("novel") || id.contains("textbook") || id.contains("journal") || id.contains("diary") {
+            return ("หนังสือ / สมุดบันทึก (Book/Notebook)", "General", "book.fill", "ห้องทำงาน", "ชั้นวางหนังสือ")
+        }
+        if id.contains("pen") || id.contains("pencil") || id.contains("marker") || id.contains("highlighter") {
+            return ("ปากกา / ดินสอ (Pen/Pencil)", "Tools", "pencil", "ห้องทำงาน", "กล่องใส่ปากกา")
+        }
+        if id.contains("scissors") || id.contains("cutter") || id.contains("shears") {
+            return ("กรรไกร / คัตเตอร์ (Scissors)", "Tools", "scissors", "ห้องทำงาน", "ลิ้นชัก")
+        }
+        
+        // 5. Drinkware, Containers & Bags
+        if id.contains("bottle") || id.contains("flask") || id.contains("thermos") {
+            return ("ขวดน้ำ / กระติกน้ำ (Bottle)", "General", "cup.and.saucer.fill", "ห้องครัว", "เคาน์เตอร์ครัว")
+        }
+        if id.contains("cup") || id.contains("mug") || id.contains("glass") || id.contains("tumbler") {
+            return ("แก้วน้ำ (Cup/Mug)", "General", "cup.and.saucer.fill", "ห้องครัว", "ชั้นวางแก้ว")
+        }
+        if id.contains("plate") || id.contains("dish") || id.contains("bowl") || id.contains("saucer") {
+            return ("จาน / ชาม (Plate/Bowl)", "General", "circle", "ห้องครัว", "ตู้เก็บจาน")
+        }
+        if id.contains("backpack") || id.contains("bag") || id.contains("luggage") || id.contains("suitcase") || id.contains("briefcase") {
+            return ("กระเป๋าเป้ / กระเป๋าเดินทาง (Bag/Luggage)", "General", "bag.fill", "ห้องนอนใหญ่", "ตู้เสื้อผ้า")
         }
         if id.contains("umbrella") || id.contains("parasol") {
-            return ("ร่มกันฝน (Umbrella)", "General", "umbrella.fill", "🚪 หน้าบ้าน", "ที่วางร่มหน้าบ้าน")
+            return ("ร่มกันฝน (Umbrella)", "General", "umbrella.fill", "หน้าบ้าน", "ที่วางร่ม")
+        }
+        if id.contains("shoe") || id.contains("sneaker") || id.contains("boot") || id.contains("sandal") || id.contains("slipper") {
+            return ("รองเท้า (Shoes)", "General", "shoeprints.fill", "หน้าบ้าน", "ตู้รองเท้า")
+        }
+        if id.contains("hat") || id.contains("cap") || id.contains("helmet") {
+            return ("หมวก (Hat/Cap)", "General", "tag.fill", "หน้าบ้าน", "ที่แขวนหมวก")
         }
         
-        // Dynamic fallback: Humanize raw Apple taxonomy identifier
+        // 6. Tools & Hardware
+        if id.contains("screwdriver") || id.contains("wrench") || id.contains("hammer") || id.contains("pliers") || id.contains("drill") || id.contains("tool") {
+            return ("เครื่องมือช่าง (Tools)", "Tools", "wrench.adjustable.fill", "โรงรถ", "กล่องเครื่องมือ")
+        }
+        if id.contains("battery") || id.contains("flashlight") || id.contains("torch") {
+            return ("ถ่านไฟฉาย / ไฟฉาย (Flashlight/Battery)", "Tools", "flashlight.on.fill", "ห้องนั่งเล่น", "ลิ้นชัก")
+        }
+        
+        // Dynamic clean English fallback
         let formattedName = id
             .replacingOccurrences(of: "_", with: " ")
             .capitalized
-        return (formattedName, "General", "tag.fill", "🛋️ ห้องนั่งเล่น", "โต๊ะทำงาน")
+        return (formattedName, "General", "tag.fill", "ห้องนั่งเล่น", "โต๊ะทำงาน")
     }
     
     private static func fallbackResult() -> ImageRecognitionResult {
         return ImageRecognitionResult(
-            primaryCaption: "🧠 Apple Vision พร้อมจำแนกสิ่งของ (1,300+ Taxonomy)",
+            primaryCaption: "Apple Vision พร้อมจำแนกสิ่งของ (1,300+ Taxonomy)",
             topPredictions: [
                 PredictedItemSuggestion(
-                    name: "กระเป๋าสตางค์ (Wallet)", category: "Valuables", tags: ["wallet", "กระเป๋าเงิน"],
-                    confidence: 0.88, icon: "wallet.bifold.fill", roomSuggestion: "🛋️ ห้องนั่งเล่น", containerSuggestion: "โต๊ะทำงาน"
+                    name: "สิ่งของทั่วไป (Item)", category: "General", tags: ["item"],
+                    confidence: 0.80, icon: "tag.fill", roomSuggestion: "ห้องนั่งเล่น", containerSuggestion: "โต๊ะทำงาน"
                 )
             ],
             autoPinPoint: CGPoint(x: 0.50, y: 0.50),
             detectedContextText: nil,
-            detectedRoomOrFurniture: "🛋️ ห้องนั่งเล่น"
+            detectedRoomOrFurniture: "ห้องนั่งเล่น"
         )
     }
 }
