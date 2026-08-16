@@ -9,9 +9,7 @@ struct RememberFlowView: View {
     
     @Query(sort: \ItemMemory.createdAt, order: .reverse) private var allItems: [ItemMemory]
     
-    @State private var currentStep: Int = 1
-    
-    // Step 1: Media, Anchor & AI
+    // Media & Visual Anchor
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var pickedImage: UIImage?
     @State private var showCameraSheet: Bool = false
@@ -23,7 +21,7 @@ struct RememberFlowView: View {
     @State private var aiResult: ImageRecognitionResult?
     @State private var autoPinPlaced: Bool = false
     
-    // Step 2: Details
+    // Details Form
     @State private var itemName: String = ""
     @State private var category: String = "General"
     @State private var room: String = ""
@@ -32,10 +30,10 @@ struct RememberFlowView: View {
     @State private var tagsText: String = ""
     @State private var note: String = ""
     
-    // Quick Presets (Clean, no noisy emoji)
+    // Quick Presets
     let roomChips: [String] = ["ห้องนอนใหญ่", "ห้องนั่งเล่น", "ห้องครัว", "หน้าบ้าน", "ห้องทำงาน", "โรงรถ"]
     let containerChips: [String] = ["ลิ้นชัก", "โต๊ะทำงาน", "ตู้เซฟ", "ชั้นวางของ", "ตู้เสื้อผ้า", "ที่แขวนผนัง"]
-    let subSpotChips: [String] = ["ชั้นบนสุด", "ชั้นล่างสุด", "ถาดไม้วางของ", "มุมซ้ายหน้า", "มุมขวา", "กล่องจัดระเบียบ"]
+    let subSpotChips: [String] = ["ชั้นบนสุด", "ชั้นล่างสุด", "ถาดไม้วางของ", "มุมซ้าย", "มุมขวา", "กล่องจัดระเบียบ"]
     let categories: [String] = ["General", "Documents", "Keys & Access", "Electronics", "Tools", "Medicines", "Clothing", "Valuables"]
     
     private var isSaveDisabled: Bool {
@@ -56,17 +54,53 @@ struct RememberFlowView: View {
             ZStack {
                 Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
                 
-                if currentStep == 1 {
-                    stepOneMediaAndAnchorView
-                } else {
-                    stepTwoDetailsFormView
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // 1. Photo & Visual Anchor Section
+                        photoSectionView
+                        
+                        // 2. Smart Spatial Recommendation (if available)
+                        if let rec = smartSpatialRecommendation, (room.isEmpty || container.isEmpty) {
+                            recommendationBanner(rec)
+                        }
+                        
+                        // 3. Item Details Form
+                        itemDetailsFormView
+                        
+                        // 4. Large Bottom Save Button
+                        saveActionButton
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
                 }
             }
-            .navigationTitle(currentStep == 1 ? lang.text("step1_title") : lang.text("step2_title"))
+            .navigationTitle(lang.text("remember_flow_title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                toolbarLeadingContent
-                toolbarTrailingContent
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: { dismiss() }) {
+                        Text(lang.text("cancel"))
+                            .font(.body)
+                            .foregroundStyle(Color.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { saveItem() }) {
+                        Text(lang.text("save"))
+                            .font(.body.bold())
+                            .foregroundStyle(isSaveDisabled ? Color.secondary : Color.indigo)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isSaveDisabled)
+                }
             }
             .sheet(isPresented: $showCameraSheet) {
                 CameraPicker(selectedImage: $pickedImage)
@@ -82,537 +116,423 @@ struct RememberFlowView: View {
         }
     }
     
-    @ToolbarContentBuilder
-    private var toolbarLeadingContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            if currentStep == 2 {
-                Button(action: { withAnimation { currentStep = 1 } }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                        Text(lang.text("back"))
+    // MARK: - Photo & Visual Anchor Sub-View
+    private var photoSectionView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let image = pickedImage {
+                VStack(spacing: 12) {
+                    VisualAnchorPicker(
+                        image: image,
+                        anchorX: $anchorX,
+                        anchorY: $anchorY
+                    )
+                    .frame(height: 280)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+                    
+                    // AI Status & Prediction Chips
+                    if isAnalyzingAI {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .tint(Color.indigo)
+                            Text("Apple Vision AI กำลังวิเคราะห์และปักหมุด...")
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(Color.indigo)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.indigo.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    } else if let result = aiResult {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "sparkles")
+                                    .foregroundStyle(Color.indigo)
+                                Text(lang.text("ai_detected_chip_title"))
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.secondary)
+                            }
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(result.topPredictions) { pred in
+                                        Button(action: {
+                                            withAnimation {
+                                                itemName = pred.name.components(separatedBy: " (").first ?? pred.name
+                                                category = pred.category
+                                                if room.isEmpty { room = pred.roomSuggestion }
+                                                if container.isEmpty { container = pred.containerSuggestion }
+                                            }
+                                        }) {
+                                            HStack(spacing: 6) {
+                                                Image(systemName: pred.icon)
+                                                Text("\(pred.name) (\(Int(pred.confidence * 100))%)")
+                                                    .font(.caption.weight(.semibold))
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
+                                            .background(itemName.contains(pred.name.components(separatedBy: " (").first ?? "") ? Color.indigo : Color(uiColor: .tertiarySystemGroupedBackground))
+                                            .foregroundStyle(itemName.contains(pred.name.components(separatedBy: " (").first ?? "") ? Color.white : Color.primary)
+                                            .clipShape(Capsule())
+                                            .contentShape(Capsule())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(12)
+                        .background(Color(uiColor: .secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
-                    .font(.body.bold())
-                    .foregroundStyle(Color.indigo)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .contentShape(Rectangle())
+                    
+                    // Photo Actions Row
+                    HStack(spacing: 12) {
+                        Button(action: { showCameraSheet = true }) {
+                            Label(lang.text("retake_photo"), systemImage: "camera.fill")
+                                .font(.caption.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        
+                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                            Label(lang.text("choose_other_photo"), systemImage: "photo.on.rectangle.angled")
+                                .font(.caption.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button(action: {
+                            withAnimation {
+                                pickedImage = nil
+                                anchorX = nil
+                                anchorY = nil
+                                aiResult = nil
+                            }
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color.red)
+                                .padding(8)
+                                .background(Color.red.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
             } else {
-                Button(action: { dismiss() }) {
-                    Text(lang.text("cancel"))
-                        .font(.body)
-                        .foregroundStyle(Color.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .contentShape(Rectangle())
+                // No photo picked yet
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        Button(action: { showCameraSheet = true }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "camera.fill")
+                                    .font(.title2)
+                                Text(lang.text("take_photo"))
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 100)
+                            .background(Color.indigo.gradient)
+                            .foregroundStyle(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .shadow(color: Color.indigo.opacity(0.25), radius: 6, y: 3)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "photo.fill.on.rectangle.fill")
+                                    .font(.title2)
+                                Text(lang.text("choose_library"))
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 100)
+                            .background(Color(uiColor: .secondarySystemGroupedBackground))
+                            .foregroundStyle(Color.indigo)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.indigo.opacity(0.2), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
             }
         }
     }
     
-    @ToolbarContentBuilder
-    private var toolbarTrailingContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            if currentStep == 1 {
-                Button(action: {
-                    withAnimation { currentStep = 2 }
-                }) {
-                    HStack(spacing: 4) {
-                        Text(lang.text("next"))
-                        Image(systemName: "chevron.right")
+    // MARK: - Recommendation Banner
+    private func recommendationBanner(_ rec: (room: String, container: String, subSpot: String)) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "lightbulb.fill")
+                .foregroundStyle(Color.yellow)
+                .font(.title3)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(lang.text("smart_recommendation_title"))
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.secondary)
+                Text("\(rec.room) › \(rec.container)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.primary)
+            }
+            
+            Spacer()
+            
+            Button("ใช้จุดนี้") {
+                withAnimation {
+                    room = rec.room
+                    container = rec.container
+                    if !rec.subSpot.isEmpty { subSpot = rec.subSpot }
+                }
+            }
+            .font(.caption.bold())
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.yellow.opacity(0.2))
+            .foregroundStyle(Color.orange)
+            .clipShape(Capsule())
+        }
+        .padding(12)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+    
+    // MARK: - Item Details Form
+    private var itemDetailsFormView: some View {
+        VStack(spacing: 16) {
+            // Item Name & Category
+            VStack(alignment: .leading, spacing: 8) {
+                Text(lang.text("item_name_label"))
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.secondary)
+                
+                TextField("เช่น พาสปอร์ต, โน้ตบุ๊ก, กุญแจรถ", text: $itemName)
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                
+                Picker("หมวดหมู่", selection: $category) {
+                    ForEach(categories, id: \.self) { cat in
+                        Text(cat).tag(cat)
                     }
-                    .font(.body.bold())
-                    .foregroundStyle(Color.indigo)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-            } else {
-                Button(action: {
-                    saveItem()
-                }) {
-                    Text(lang.text("save"))
-                        .font(.body.bold())
-                        .foregroundStyle(isSaveDisabled ? Color.secondary : Color.indigo)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .contentShape(Rectangle())
+                .pickerStyle(.segmented)
+            }
+            
+            // Room
+            VStack(alignment: .leading, spacing: 8) {
+                Text(lang.text("select_room"))
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.secondary)
+                
+                FlowLayout(spacing: 6) {
+                    ForEach(roomChips, id: \.self) { chip in
+                        Button(action: { room = chip }) {
+                            Text(chip)
+                                .font(.caption.weight(.medium))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(room == chip ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground))
+                                .foregroundStyle(room == chip ? Color.white : Color.primary)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
-                .disabled(isSaveDisabled)
+                
+                TextField("ระบุห้อง...", text: $room)
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            
+            // Storage / Furniture
+            VStack(alignment: .leading, spacing: 8) {
+                Text(lang.text("select_container"))
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.secondary)
+                
+                FlowLayout(spacing: 6) {
+                    ForEach(containerChips, id: \.self) { chip in
+                        Button(action: { container = chip }) {
+                            Text(chip)
+                                .font(.caption.weight(.medium))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(container == chip ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground))
+                                .foregroundStyle(container == chip ? Color.white : Color.primary)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                
+                TextField("ระบุที่เก็บ...", text: $container)
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            
+            // Specific Spot
+            VStack(alignment: .leading, spacing: 8) {
+                Text(lang.text("select_subspot"))
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.secondary)
+                
+                FlowLayout(spacing: 6) {
+                    ForEach(subSpotChips, id: \.self) { chip in
+                        Button(action: { subSpot = chip }) {
+                            Text(chip)
+                                .font(.caption.weight(.medium))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(subSpot == chip ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground))
+                                .foregroundStyle(subSpot == chip ? Color.white : Color.primary)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                
+                TextField("ระบุจุดย่อย...", text: $subSpot)
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            
+            // Notes
+            VStack(alignment: .leading, spacing: 8) {
+                Text(lang.text("notes_label"))
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.secondary)
+                
+                TextField("หมายเหตุเพิ่มเติม (ถ้ามี)...", text: $note)
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
         }
     }
     
+    // MARK: - Save Action Button
+    private var saveActionButton: some View {
+        Button(action: { saveItem() }) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                Text(lang.text("save"))
+            }
+            .font(.headline.weight(.bold))
+            .foregroundStyle(Color.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(isSaveDisabled ? Color.secondary.opacity(0.5) : Color.indigo)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .shadow(color: isSaveDisabled ? .clear : Color.indigo.opacity(0.3), radius: 8, y: 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isSaveDisabled)
+        .padding(.top, 8)
+    }
+    
+    // MARK: - Helper Methods
     private func handlePhotoSelection(_ item: PhotosPickerItem?) {
+        guard let item = item else { return }
         Task {
-            if let data = try? await item?.loadTransferable(type: Data.self),
-               let uiImage = UIImage(data: data) {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let image = UIImage(data: data) {
                 await MainActor.run {
-                    self.pickedImage = uiImage
+                    self.pickedImage = image
                     self.anchorX = nil
                     self.anchorY = nil
                     self.autoPinPlaced = false
-                    triggerAIAnalysis(image: uiImage)
                 }
             }
         }
     }
     
-    // Trigger Offline Vision AI Analysis & Auto-Pin
     private func triggerAIAnalysis(image: UIImage) {
         isAnalyzingAI = true
+        autoPinPlaced = false
         Task {
             let result = await OnDeviceVisionService.analyzeImage(image)
             await MainActor.run {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                    self.aiResult = result
-                    self.isAnalyzingAI = false
-                    
-                    if let pin = result.autoPinPoint {
-                        self.anchorX = Double(pin.x)
-                        self.anchorY = Double(pin.y)
-                        self.autoPinPlaced = true
-                    }
-                    
-                    if let top = result.topPredictions.first, self.itemName.isEmpty {
-                        self.applyPrediction(top)
-                    }
-                }
-            }
-        }
-    }
-    
-    private func applyPrediction(_ pred: PredictedItemSuggestion) {
-        self.itemName = pred.name
-        self.category = pred.category
-        self.tagsText = pred.tags.joined(separator: ", ")
-        if self.room.isEmpty { self.room = pred.roomSuggestion }
-        if self.container.isEmpty { self.container = pred.containerSuggestion }
-    }
-    
-    // MARK: - Step 1 View
-    private var stepOneMediaAndAnchorView: some View {
-        VStack(spacing: 12) {
-            if let image = pickedImage {
-                photoPickedSection(image: image)
-            } else {
-                noPhotoPlaceholderSection
-            }
-        }
-    }
-    
-    private func photoPickedSection(image: UIImage) -> some View {
-        VStack(spacing: 12) {
-            VisualAnchorPicker(image: image, anchorX: $anchorX, anchorY: $anchorY)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal)
-            
-            if autoPinPlaced {
-                HStack(spacing: 6) {
-                    Image(systemName: "sparkles")
-                        .foregroundStyle(.yellow)
-                    Text("AI ปักหมุดให้อัตโนมัติ (แตะเพื่อย้ายตำแหน่งได้)")
-                        .font(.caption.bold())
-                        .foregroundStyle(.primary)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Capsule().fill(Color.indigo.opacity(0.12)))
-            }
-            
-            aiPredictionCard
-                .padding(.horizontal)
-            
-            HStack(spacing: 12) {
-                Button(action: { showCameraSheet = true }) {
-                    Label(lang.text("retake_photo"), systemImage: "camera.fill")
-                        .font(.subheadline.bold())
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(uiColor: .secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                self.isAnalyzingAI = false
+                self.aiResult = result
                 
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    Label(lang.text("choose_other_photo"), systemImage: "photo.on.rectangle")
-                        .font(.subheadline.bold())
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(uiColor: .secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 6)
-        }
-    }
-    
-    private var noPhotoPlaceholderSection: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            ZStack {
-                Circle()
-                    .fill(Color.indigo.opacity(0.12))
-                    .frame(width: 96, height: 96)
-                Image(systemName: "camera.viewfinder")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.indigo)
-            }
-            
-            VStack(spacing: 6) {
-                Text(lang.text("remember_new_spot"))
-                    .font(.title3.bold())
-                Text("AI จะระบุสิ่งของและปักหมุดตำแหน่งบนภาพให้อัตโนมัติ")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 28)
-            }
-            
-            VStack(spacing: 14) {
-                Button(action: { showCameraSheet = true }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "camera.fill")
-                        Text(lang.text("take_photo"))
-                    }
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.indigo)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "photo.stack.fill")
-                        Text(lang.text("choose_library"))
-                    }
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                
-                Button(action: {
-                    withAnimation { currentStep = 2 }
-                }) {
-                    Text(lang.text("skip_photo"))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 8)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 32)
-            
-            Spacer()
-        }
-    }
-    
-    // AI Predictions Card
-    private var aiPredictionCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if isAnalyzingAI {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text("Apple Vision วิเคราะห์ภาพ & Auto-Pin...")
-                        .font(.caption.bold())
-                        .foregroundStyle(.indigo)
-                }
-                .padding(.vertical, 4)
-            } else if let result = aiResult {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Image(systemName: "sparkles")
-                            .foregroundStyle(.indigo)
-                        Text(result.primaryCaption)
-                            .font(.caption.bold())
-                            .foregroundStyle(.primary)
-                        Spacer()
-                    }
-                    
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            ForEach(result.topPredictions) { pred in
-                                Button(action: {
-                                    withAnimation { applyPrediction(pred) }
-                                }) {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: pred.icon)
-                                            .font(.caption2)
-                                        Text(pred.name)
-                                            .font(.caption2.bold())
-                                        Text("\(Int(pred.confidence * 100))%")
-                                            .font(.system(size: 9, weight: .bold))
-                                            .foregroundStyle(itemName == pred.name ? Color.white : Color.indigo)
-                                    }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 7)
-                                    .background(itemName == pred.name ? Color.indigo : Color.indigo.opacity(0.12))
-                                    .foregroundStyle(itemName == pred.name ? Color.white : Color.indigo)
-                                    .clipShape(Capsule())
-                                    .contentShape(Capsule())
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .padding(10)
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-    
-    // MARK: - Step 2 View
-    private var stepTwoDetailsFormView: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                if let rec = smartSpatialRecommendation, room.isEmpty || container.isEmpty {
-                    smartSpatialRecommendationBadge(rec: rec)
+                // Auto-place pin from Apple Vision saliency if user hasn't set one
+                if self.anchorX == nil, let pt = result.autoPinPoint {
+                    self.anchorX = Double(pt.x)
+                    self.anchorY = Double(pt.y)
+                    self.autoPinPlaced = true
                 }
                 
-                itemNameFieldSection
-                roomFieldSection
-                containerFieldSection
-                subSpotFieldSection
-                notesFieldSection
-                
-                Spacer(minLength: 30)
-            }
-            .padding(.top, 10)
-        }
-    }
-    
-    private func smartSpatialRecommendationBadge(rec: (room: String, container: String, subSpot: String)) -> some View {
-        Button(action: {
-            withAnimation {
-                self.room = rec.room
-                self.container = rec.container
-                self.subSpot = rec.subSpot
-            }
-        }) {
-            HStack(spacing: 10) {
-                Image(systemName: "lightbulb.fill")
-                    .font(.title3)
-                    .foregroundStyle(.yellow)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Smart Spatial Recommendation")
-                        .font(.caption.bold())
-                        .foregroundStyle(.primary)
-                    Text("ปกติของหมวดนี้เก็บไว้ที่: \(rec.room) › \(rec.container) (แตะเพื่อใช้)")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "arrow.turn.down.right")
-                    .font(.caption.bold())
-                    .foregroundStyle(.indigo)
-            }
-            .padding(12)
-            .background(Color.yellow.opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.yellow.opacity(0.3), lineWidth: 1))
-            .contentShape(Rectangle())
-            .padding(.horizontal)
-        }
-        .buttonStyle(.plain)
-    }
-    
-    private var itemNameFieldSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label(lang.text("item_name_label"), systemImage: "pencil.line")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-            
-            TextField("ชื่อสิ่งของ", text: $itemName)
-                .textFieldStyle(.roundedBorder)
-        }
-        .padding()
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
-    }
-    
-    private var roomFieldSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label(lang.text("select_room"), systemImage: "house.fill")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-            
-            FlowLayout(spacing: 6) {
-                ForEach(roomChips, id: \.self) { r in
-                    Button(action: { self.room = r }) {
-                        Text(r)
-                            .font(.caption.bold())
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(room == r ? Color.indigo : Color(uiColor: .tertiarySystemGroupedBackground))
-                            .foregroundStyle(room == r ? Color.white : Color.primary)
-                            .clipShape(Capsule())
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
+                // Auto-populate item name & category if empty
+                if self.itemName.isEmpty, let top = result.topPredictions.first {
+                    self.itemName = top.name.components(separatedBy: " (").first ?? top.name
+                    self.category = top.category
+                    if self.room.isEmpty { self.room = top.roomSuggestion }
+                    if self.container.isEmpty { self.container = top.containerSuggestion }
                 }
             }
-            
-            TextField("ห้อง", text: $room)
-                .textFieldStyle(.roundedBorder)
         }
-        .padding()
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
     }
     
-    private var containerFieldSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label(lang.text("select_container"), systemImage: "archivebox.fill")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-            
-            FlowLayout(spacing: 6) {
-                ForEach(containerChips, id: \.self) { c in
-                    Button(action: { self.container = c }) {
-                        Text(c)
-                            .font(.caption.bold())
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(container == c ? Color.indigo : Color(uiColor: .tertiarySystemGroupedBackground))
-                            .foregroundStyle(container == c ? Color.white : Color.primary)
-                            .clipShape(Capsule())
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            
-            TextField("ที่เก็บ / เฟอร์นิเจอร์", text: $container)
-                .textFieldStyle(.roundedBorder)
-        }
-        .padding()
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
-    }
-    
-    private var subSpotFieldSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label(lang.text("select_subspot"), systemImage: "scope")
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-            
-            FlowLayout(spacing: 6) {
-                ForEach(subSpotChips, id: \.self) { s in
-                    Button(action: { self.subSpot = s }) {
-                        Text(s)
-                            .font(.caption.bold())
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(subSpot == s ? Color.indigo : Color(uiColor: .tertiarySystemGroupedBackground))
-                            .foregroundStyle(subSpot == s ? Color.white : Color.primary)
-                            .clipShape(Capsule())
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            
-            TextField("จุดย่อย / มุมที่วาง", text: $subSpot)
-                .textFieldStyle(.roundedBorder)
-        }
-        .padding()
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
-    }
-    
-    private var notesFieldSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(lang.text("notes_label"))
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-            TextField("หมายเหตุเพิ่มเติม...", text: $note)
-                .textFieldStyle(.roundedBorder)
-        }
-        .padding()
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .padding(.horizontal)
-    }
-    
-    // MARK: - Save Logic
     private func saveItem() {
-        let trimmedName = itemName.trimmingCharacters(in: .whitespaces)
-        let trimmedRoom = room.trimmingCharacters(in: .whitespaces)
-        guard !trimmedName.isEmpty && !trimmedRoom.isEmpty else { return }
+        guard !isSaveDisabled else { return }
         
-        let tags = tagsText
-            .components(separatedBy: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-        
-        let newItem = ItemMemory(
-            name: trimmedName,
-            category: category,
-            tags: tags,
-            note: note.trimmingCharacters(in: .whitespaces),
-            createdAt: Date(),
-            isSample: false
-        )
-        
-        var imageData: Data? = nil
-        if let img = pickedImage {
-            imageData = ImageManager.prepareImageForStorage(img)
-        }
-        
-        let initialEntry = MemoryEntry(
-            room: trimmedRoom,
-            container: container.trimmingCharacters(in: .whitespaces),
+        let newEntry = MemoryEntry(
+            room: room.trimmingCharacters(in: .whitespaces),
+            container: container.trimmingCharacters(in: .whitespaces).isEmpty ? "โต๊ะ / ตู้" : container.trimmingCharacters(in: .whitespaces),
             subSpot: subSpot.trimmingCharacters(in: .whitespaces),
-            note: note.trimmingCharacters(in: .whitespaces),
-            imageData: imageData,
             anchorX: anchorX,
             anchorY: anchorY,
-            storedAt: Date(),
-            isCurrent: true
+            note: note.trimmingCharacters(in: .whitespaces),
+            isPrimarySpot: true
         )
         
-        newItem.entries.append(initialEntry)
+        // Save image if present
+        if let image = pickedImage {
+            let filename = "item_\(UUID().uuidString).jpg"
+            if ImageManager.shared.saveImage(image, filename: filename) {
+                newEntry.imageFilename = filename
+            }
+        }
+        
+        var tags: [String] = []
+        if let ai = aiResult {
+            for pred in ai.topPredictions {
+                tags.append(contentsOf: pred.tags)
+            }
+        }
+        tags.append(itemName)
+        tags.append(room)
+        tags.append(container)
+        
+        let newItem = ItemMemory(
+            name: itemName.trimmingCharacters(in: .whitespaces),
+            category: category,
+            tags: Array(Set(tags)),
+            note: note.trimmingCharacters(in: .whitespaces)
+        )
+        
+        newItem.entries.append(newEntry)
         modelContext.insert(newItem)
-        
-        let newLocation = SavedLocation(
-            room: trimmedRoom,
-            container: container.trimmingCharacters(in: .whitespaces),
-            subSpot: subSpot.trimmingCharacters(in: .whitespaces)
-        )
-        modelContext.insert(newLocation)
         
         try? modelContext.save()
         dismiss()

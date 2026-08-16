@@ -8,20 +8,24 @@ struct PackPresetItem: Identifiable {
     var isPacked: Bool = false
 }
 
-struct PackTemplate: Identifiable {
+struct PackTemplate: Identifiable, Equatable {
     let id: String
-    let title: String
-    let subtitle: String
-    let icon: String
-    let color: Color
+    var title: String
+    var subtitle: String
+    var icon: String
+    var color: Color
     var defaultItems: [String]
+    
+    static func == (lhs: PackTemplate, rhs: PackTemplate) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 struct PackService {
-    static let templates: [PackTemplate] = [
+    static let defaultTemplates: [PackTemplate] = [
         PackTemplate(
             id: "travel",
-            title: "เดินทาง & ท่องเที่ยว (Travel)",
+            title: "เดินทาง (Travel)",
             subtitle: "พาสปอร์ต, สายชาร์จ, กระเป๋าสตางค์, ยาสามัญ",
             icon: "airplane",
             color: .indigo,
@@ -29,7 +33,7 @@ struct PackService {
         ),
         PackTemplate(
             id: "work",
-            title: "ไปทำงาน / ออกข้างนอก (Work)",
+            title: "ไปทำงาน (Work)",
             subtitle: "โน้ตบุ๊ก, เมาส์, คีย์การ์ด, หูฟัง, สายชาร์จ",
             icon: "briefcase.fill",
             color: .blue,
@@ -37,7 +41,7 @@ struct PackService {
         ),
         PackTemplate(
             id: "daily",
-            title: "ของจำเป็นประจำวัน (Daily)",
+            title: "ของประจำวัน (Daily)",
             subtitle: "กุญแจบ้าน, กุญแจรถ, กระเป๋าเงิน, แว่นตา",
             icon: "sun.max.fill",
             color: .orange,

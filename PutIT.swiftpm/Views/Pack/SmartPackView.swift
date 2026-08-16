@@ -7,14 +7,22 @@ struct SmartPackView: View {
     @ObservedObject private var lang = LanguageManager.shared
     @Query(sort: \ItemMemory.createdAt, order: .reverse) private var allItems: [ItemMemory]
     
+    @State private var allTemplates: [PackTemplate] = PackService.defaultTemplates
     @State private var selectedTemplateIndex: Int = 0
     @State private var packedState: [String: Bool] = [:]
     @State private var customItems: [String: [String]] = [:]
-    @State private var newItemText: String = ""
+    
+    // Alerts
     @State private var showAddItemSheet: Bool = false
+    @State private var newItemText: String = ""
+    @State private var showAddSetSheet: Bool = false
+    @State private var newSetNameText: String = ""
     
     private var currentTemplate: PackTemplate {
-        PackService.templates[selectedTemplateIndex]
+        if selectedTemplateIndex < allTemplates.count {
+            return allTemplates[selectedTemplateIndex]
+        }
+        return allTemplates.first ?? PackService.defaultTemplates[0]
     }
     
     private var activeItemList: [String] {
@@ -48,15 +56,20 @@ struct SmartPackView: View {
                 .padding(.vertical, 12)
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            .navigationTitle("Smart Pack")
+            .navigationTitle(lang.text("smart_pack_title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(action: { showAddItemSheet = true }) {
-                        Image(systemName: "plus")
-                            .font(.body.bold())
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(Rectangle())
+                    Button(action: { showAddSetSheet = true }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                            Text(lang.text("new_pack_set"))
+                        }
+                        .font(.body.bold())
+                        .foregroundStyle(Color.indigo)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
@@ -73,14 +86,37 @@ struct SmartPackView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .alert("เพิ่มของในรายการจัดของ", isPresented: $showAddItemSheet) {
-                TextField("ชื่อสิ่งของ เช่น แว่นตา, ยาประจำตัว", text: $newItemText)
-                Button("เพิ่ม", action: addCustomItem)
-                Button("ยกเลิก", role: .cancel) { newItemText = "" }
+            .alert(lang.text("new_pack_set_title"), isPresented: $showAddSetSheet) {
+                TextField(lang.text("enter_pack_set_name"), text: $newSetNameText)
+                Button(lang.text("save"), action: addNewPackSet)
+                Button(lang.text("cancel"), role: .cancel) { newSetNameText = "" }
             } message: {
-                Text("เพิ่มสิ่งของในรายการ \(currentTemplate.title)")
+                Text(lang.text("enter_pack_set_name"))
+            }
+            .alert(lang.text("add_pack_item"), isPresented: $showAddItemSheet) {
+                TextField(lang.text("enter_item_name"), text: $newItemText)
+                Button(lang.text("save"), action: addCustomItem)
+                Button(lang.text("cancel"), role: .cancel) { newItemText = "" }
+            } message: {
+                Text("\(currentTemplate.title)")
             }
         }
+    }
+    
+    private func addNewPackSet() {
+        let trimmed = newSetNameText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let newTpl = PackTemplate(
+            id: "custom_\(UUID().uuidString.prefix(6))",
+            title: trimmed,
+            subtitle: "รายการที่กำหนดเอง",
+            icon: "bag.fill",
+            color: .purple,
+            defaultItems: []
+        )
+        allTemplates.append(newTpl)
+        selectedTemplateIndex = allTemplates.count - 1
+        newSetNameText = ""
     }
     
     private func addCustomItem() {
@@ -98,7 +134,7 @@ struct SmartPackView: View {
     private var scenarioPickerSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(Array(PackService.templates.enumerated()), id: \.offset) { index, template in
+                ForEach(Array(allTemplates.enumerated()), id: \.offset) { index, template in
                     let isSelected = selectedTemplateIndex == index
                     Button(action: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -132,7 +168,7 @@ struct SmartPackView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(currentTemplate.title)
                         .font(.headline)
-                    Text("เตรียมของแล้ว \(packedCount) จาก \(activeItemList.count) ชิ้น")
+                    Text("\(lang.text("pack_progress_label")) \(packedCount) / \(activeItemList.count)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -172,6 +208,29 @@ struct SmartPackView: View {
                     }
                 )
             }
+            
+            // Prominent Box Button at the bottom of checklist
+            Button(action: { showAddItemSheet = true }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Color.indigo)
+                    Text(lang.text("add_pack_item"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.indigo)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(Color.indigo.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, dash: [6]))
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
         }
         .padding(.horizontal)
     }
@@ -207,7 +266,7 @@ struct PackItemRow: View {
             }
             .buttonStyle(.plain)
             
-            // Text Details (Tapping text also toggles checkbox!)
+            // Text Details
             Button(action: onToggle) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(itemName)
