@@ -16,7 +16,7 @@
 - Normalized coordinate mapping ensures accurate pin placement across iPad orientations and aspect ratios.
 
 ### 2. 🧠 Apple Vision 1,300+ Taxonomy Engine
-- Powered by `VNClassifyImageRequest` and `VNRecognizeTextRequest` directly on Apple Neural Engine.
+- Powered by `VNClassifyImageRequest` directly on Apple Neural Engine with comprehensive bilingual mapping.
 - 100% offline — zero cloud dependency, zero external API latency, zero privacy leaks.
 
 ### 3. 💡 Smart Spatial Recommendation
