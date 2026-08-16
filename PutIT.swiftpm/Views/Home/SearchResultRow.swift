@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ItemCardVisualRow: View {
     let result: SearchMatchResult
+    @ObservedObject private var lang = LanguageManager.shared
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -30,7 +31,7 @@ struct ItemCardVisualRow: View {
                         Circle()
                             .fill(Color.red)
                             .frame(width: 8, height: 8)
-                        Text("มีหมุดปักตำแหน่ง")
+                        Text(lang.text("has_pin_badge"))
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.white)
                     }
@@ -52,7 +53,7 @@ struct ItemCardVisualRow: View {
                     Spacer()
                     
                     if result.item.entries.count > 1 {
-                        Text("\(result.item.entries.count) จุดที่เคยเก็บ")
+                        Text("\(result.item.entries.count) \(lang.text("past_spots"))")
                             .font(.system(size: 10, weight: .bold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -65,7 +66,7 @@ struct ItemCardVisualRow: View {
                     Image(systemName: "mappin.and.ellipse")
                         .font(.caption)
                         .foregroundStyle(.indigo)
-                    Text(result.item.currentEntry?.locationSummary ?? "ไม่ระบุตำแหน่ง")
+                    Text(result.item.currentEntry?.locationSummary ?? lang.text("no_location"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

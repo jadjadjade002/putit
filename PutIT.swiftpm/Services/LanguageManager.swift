@@ -168,6 +168,23 @@ class LanguageManager: ObservableObject {
             .turkish: "Henüz kayıtlı eşya yok",
             .vietnamese: "Chưa có đồ vật nào được lưu"
         ],
+        "no_items_sub": [
+            .thai: "แตะปุ่มถ่ายรูปเพื่อเริ่มจำที่เก็บของชิ้นแรก",
+            .english: "Tap '+ Remember New Item' to start tracking",
+            .spanish: "Toca para guardar tu primer objeto",
+            .french: "Touchez pour enregistrer votre premier objet",
+            .german: "Tippen Sie, um Ihren ersten Gegenstand zu speichern",
+            .chinese: "点击拍照记录您的第一件物品",
+            .japanese: "タップして最初のアイテムを記録しましょう",
+            .korean: "첫 번째 물건을 기록하려면 탭하세요",
+            .portuguese: "Toque para salvar seu primeiro item",
+            .italian: "Tocca per salvare il tuo primo oggetto",
+            .russian: "Нажмите, чтобы сохранить первую вещь",
+            .arabic: "انقر لبدء حفظ أول عنصر لديك",
+            .hindi: "अपनी पहली वस्तु सहेजने के लिए टैप करें",
+            .turkish: "İlk eşyanızı kaydetmek için dokunun",
+            .vietnamese: "Chạm để lưu đồ vật đầu tiên của bạn"
+        ],
         "no_search_match": [
             .thai: "ไม่พบสิ่งของที่ตรงกับการค้นหา",
             .english: "No items matched your search",
@@ -184,6 +201,23 @@ class LanguageManager: ObservableObject {
             .hindi: "कोई मिलती-जुलती वस्तु नहीं मिली",
             .turkish: "Aramanızla eşleşen eşya bulunamadı",
             .vietnamese: "Không tìm thấy đồ vật phù hợp"
+        ],
+        "listening_voice": [
+            .thai: "กำลังฟังเสียงพูด...",
+            .english: "Listening to your voice...",
+            .spanish: "Escuchando...",
+            .french: "Écoute en cours...",
+            .german: "Höre zu...",
+            .chinese: "正在倾听语音...",
+            .japanese: "音声を聞き取り中...",
+            .korean: "음성을 듣고 있습니다...",
+            .portuguese: "Ouvindo...",
+            .italian: "In ascolto...",
+            .russian: "Слушаю голос...",
+            .arabic: "جارٍ الاستماع للصوت...",
+            .hindi: "आवाज सुन रहा हूँ...",
+            .turkish: "Ses dinleniyor...",
+            .vietnamese: "Đang nghe giọng nói..."
         ],
         
         // Categories
@@ -216,6 +250,36 @@ class LanguageManager: ObservableObject {
             .thai: "เครื่องมือ", .english: "Tools", .spanish: "Herramientas", .french: "Outils", .german: "Werkzeuge",
             .chinese: "工具", .japanese: "工具", .korean: "도구/공구", .portuguese: "Ferramentas", .italian: "Strumenti",
             .russian: "Инструменты", .arabic: "أدوات", .hindi: "उपकरण", .turkish: "Aletler", .vietnamese: "Dụng cụ"
+        ],
+        
+        // Card Badges
+        "has_pin_badge": [
+            .thai: "มีหมุดปักตำแหน่ง", .english: "Visual Anchor Pin", .spanish: "Punto fijado",
+            .french: "Point épinglé", .german: "Visueller Pin", .chinese: "已图钉标记",
+            .japanese: "ピン留め位置あり", .korean: "핀 고정 위치 있음", .portuguese: "Ponto fixado",
+            .italian: "Spillo presente", .russian: "С меткой места", .arabic: "محدد بنقطة",
+            .hindi: "पिन किया गया", .turkish: "İğneli Konum", .vietnamese: "Đã ghim vị trí"
+        ],
+        "past_spots": [
+            .thai: "จุดที่เคยเก็บ", .english: "Past spots", .spanish: "Ubicaciones anteriores",
+            .french: "Anciens lieux", .german: "Frühere Orte", .chinese: "处历史位置",
+            .japanese: "か所の保管履歴", .korean: "곳의 이전 보관 위치", .portuguese: "Locais anteriores",
+            .italian: "Posizioni passate", .russian: "Прошлые места", .arabic: "أماكن سابقة",
+            .hindi: "पिछले स्थान", .turkish: "Önceki konum", .vietnamese: "Vị trí trước đây"
+        ],
+        "no_location": [
+            .thai: "ไม่ระบุตำแหน่ง", .english: "No location specified", .spanish: "Sin ubicación",
+            .french: "Aucun lieu spécifié", .german: "Kein Ort angegeben", .chinese: "未指定位置",
+            .japanese: "場所未指定", .korean: "위치 미지정", .portuguese: "Sem local",
+            .italian: "Nessun luogo", .russian: "Место не указано", .arabic: "الموقع غير محدد",
+            .hindi: "स्थान निर्दिष्ट नहीं", .turkish: "Konum belirtilmedi", .vietnamese: "Chưa chỉ định nơi"
+        ],
+        "no_photo": [
+            .thai: "ไม่มีรูปภาพ", .english: "No Photo", .spanish: "Sin foto",
+            .french: "Pas de photo", .german: "Kein Foto", .chinese: "无照片",
+            .japanese: "写真なし", .korean: "사진 없음", .portuguese: "Sem foto",
+            .italian: "Nessuna foto", .russian: "Нет фото", .arabic: "لا توجد صورة",
+            .hindi: "फोटो नहीं है", .turkish: "Fotoğraf Yok", .vietnamese: "Không có ảnh"
         ],
         
         // Unified Remember Flow
@@ -282,6 +346,16 @@ class LanguageManager: ObservableObject {
             .chinese: "物品名称", .japanese: "アイテム名", .korean: "물건 이름", .portuguese: "Nome", .italian: "Nome",
             .russian: "Название", .arabic: "اسم العنصر", .hindi: "नाम", .turkish: "Eşya Adı", .vietnamese: "Tên đồ vật"
         ],
+        "item_name_placeholder": [
+            .thai: "เช่น พาสปอร์ต, เมาส์, กุญแจรถ", .english: "e.g. Passport, Mouse, Car Key",
+            .spanish: "ej. Pasaporte, Ratón, Llave", .french: "ex. Passeport, Souris, Clé",
+            .german: "z.B. Reisepass, Maus, Autoschlüssel", .chinese: "如：护照、鼠标、车钥匙",
+            .japanese: "例：パスポート、マウス、車の鍵", .korean: "예: 여권, 마우스, 자동차 열쇠",
+            .portuguese: "ex: Passaporte, Mouse, Chave do carro", .italian: "es. Passaporto, Mouse, Chiave auto",
+            .russian: "напр. Паспорт, Мышь, Ключи", .arabic: "مثل: جواز سفر، فأرة، مفتاح سيارة",
+            .hindi: "जैसे: पासपोर्ट, माउस, कार की चाबी", .turkish: "örn. Pasaport, Fare, Araba Anahtarı",
+            .vietnamese: "ví dụ: Hộ chiếu, Chuột, Chìa khóa xe"
+        ],
         "select_room": [
             .thai: "ห้อง", .english: "Room", .spanish: "Habitación", .french: "Pièce", .german: "Raum",
             .chinese: "房间", .japanese: "部屋", .korean: "방", .portuguese: "Cômodo", .italian: "Stanza",
@@ -336,6 +410,13 @@ class LanguageManager: ObservableObject {
             .turkish: "Akıllı Konum Önerisi:",
             .vietnamese: "Gợi ý nơi cất thông minh:"
         ],
+        "use_this_spot": [
+            .thai: "ใช้จุดนี้", .english: "Use this spot", .spanish: "Usar este",
+            .french: "Utiliser ce lieu", .german: "Diesen Ort nutzen", .chinese: "使用此位置",
+            .japanese: "この場所を使う", .korean: "이 위치 사용", .portuguese: "Usar este",
+            .italian: "Usa questo", .russian: "Использовать", .arabic: "استخدام هذا المكان",
+            .hindi: "यह स्थान चुनें", .turkish: "Bu Konumu Kullan", .vietnamese: "Dùng vị trí này"
+        ],
         
         // Item detail
         "current_location": [
@@ -381,6 +462,35 @@ class LanguageManager: ObservableObject {
             .japanese: "すべて削除", .korean: "모든 기록 삭제", .portuguese: "Excluir histórico",
             .italian: "Elimina cronologia", .russian: "Удалить вещь", .arabic: "حذف السجل",
             .hindi: "इतिहास हटाएं", .turkish: "Eşyayı sil", .vietnamese: "Xóa toàn bộ"
+        ],
+        "still_here": [
+            .thai: "เก็บไว้ที่เดิม", .english: "Still in the same spot", .spanish: "En el mismo lugar",
+            .french: "Toujours au même endroit", .german: "Am selben Ort", .chinese: "仍在原位",
+            .japanese: "元の場所に保管", .korean: "같은 위치에 보관", .portuguese: "No mesmo local",
+            .italian: "Nello stesso posto", .russian: "На том же месте", .arabic: "في نفس المكان",
+            .hindi: "उसी स्थान पर", .turkish: "Aynı yerde", .vietnamese: "Vẫn ở chỗ cũ"
+        ],
+        "relocate_new_spot": [
+            .thai: "ย้ายไปที่เก็บใหม่", .english: "Move to a new spot", .spanish: "Mover a nuevo lugar",
+            .french: "Déplacer vers un nouveau lieu", .german: "An neuen Ort verlegen", .chinese: "移动到新位置",
+            .japanese: "新しい場所に移動", .korean: "새 위치로 이동", .portuguese: "Mover para novo local",
+            .italian: "Sposta in un nuovo posto", .russian: "Переместить на новое место", .arabic: "نقل إلى مكان جديد",
+            .hindi: "नए स्थान पर ले जाएं", .turkish: "Yeni konuma taşı", .vietnamese: "Chuyển sang vị trí mới"
+        ],
+        "relocate_title": [
+            .thai: "ย้ายที่เก็บใหม่", .english: "Relocate Item", .spanish: "Mudar ubicación",
+            .french: "Nouveau lieu", .german: "Neuer Standort", .chinese: "更新存放位置",
+            .japanese: "新しい保管場所", .korean: "새 보관 위치", .portuguese: "Novo local",
+            .italian: "Nuova posizione", .russian: "Новое место", .arabic: "تغيير المكان",
+            .hindi: "नया स्थान", .turkish: "Yeni Konum", .vietnamese: "Vị trí mới"
+        ],
+        "no_photo_in_system": [
+            .thai: "ยังไม่มีรูปหรือจุดปักในระบบ", .english: "No photo anchor recorded",
+            .spanish: "Sin foto guardada", .french: "Aucune photo", .german: "Kein Foto vorhanden",
+            .chinese: "尚未记录图钉照片", .japanese: "画像・ピン留め未登録", .korean: "사진 및 핀 미등록",
+            .portuguese: "Sem foto salva", .italian: "Nessuna foto", .russian: "Фото не сохранено",
+            .arabic: "لم يتم حفظ صورة", .hindi: "कोई फोटो रिकॉर्ड नहीं", .turkish: "Fotoğraf kaydedilmedi",
+            .vietnamese: "Chưa có ảnh ghim"
         ],
         
         // Smart Pack Keys

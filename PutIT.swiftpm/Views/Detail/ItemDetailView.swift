@@ -102,7 +102,7 @@ struct ItemDetailView: View {
                     Image(systemName: "camera.badge.ellipsis")
                         .font(.system(size: 48))
                         .foregroundStyle(.secondary)
-                    Text("No Photo")
+                    Text(lang.text("no_photo"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

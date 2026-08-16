@@ -293,12 +293,14 @@ struct RememberFlowView: View {
             
             Spacer()
             
-            Button("ใช้จุดนี้") {
+            Button(action: {
                 withAnimation {
                     room = rec.room
-                    container = rec.container
+                    if !rec.container.isEmpty { container = rec.container }
                     if !rec.subSpot.isEmpty { subSpot = rec.subSpot }
                 }
+            }) {
+                Text(lang.text("use_this_spot"))
             }
             .font(.caption.bold())
             .padding(.horizontal, 10)
@@ -321,13 +323,13 @@ struct RememberFlowView: View {
                     .font(.caption.bold())
                     .foregroundStyle(Color.secondary)
                 
-                TextField("เช่น พาสปอร์ต, โน้ตบุ๊ก, กุญแจรถ", text: $itemName)
+                TextField(lang.text("item_name_placeholder"), text: $itemName)
                     .textFieldStyle(.plain)
                     .padding(12)
                     .background(Color(uiColor: .secondarySystemGroupedBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 
-                Picker("หมวดหมู่", selection: $category) {
+                Picker(lang.text("item_name_label"), selection: $category) {
                     ForEach(categories, id: \.self) { cat in
                         Text(cat).tag(cat)
                     }
@@ -356,7 +358,7 @@ struct RememberFlowView: View {
                     }
                 }
                 
-                TextField("ระบุห้อง...", text: $room)
+                TextField(lang.text("select_room"), text: $room)
                     .textFieldStyle(.plain)
                     .padding(12)
                     .background(Color(uiColor: .secondarySystemGroupedBackground))
@@ -384,7 +386,7 @@ struct RememberFlowView: View {
                     }
                 }
                 
-                TextField("ระบุที่เก็บ...", text: $container)
+                TextField(lang.text("select_container"), text: $container)
                     .textFieldStyle(.plain)
                     .padding(12)
                     .background(Color(uiColor: .secondarySystemGroupedBackground))
@@ -412,7 +414,7 @@ struct RememberFlowView: View {
                     }
                 }
                 
-                TextField("ระบุจุดย่อย...", text: $subSpot)
+                TextField(lang.text("select_subspot"), text: $subSpot)
                     .textFieldStyle(.plain)
                     .padding(12)
                     .background(Color(uiColor: .secondarySystemGroupedBackground))
@@ -425,7 +427,7 @@ struct RememberFlowView: View {
                     .font(.caption.bold())
                     .foregroundStyle(Color.secondary)
                 
-                TextField("หมายเหตุเพิ่มเติม (ถ้ามี)...", text: $note)
+                TextField(lang.text("notes_label"), text: $note)
                     .textFieldStyle(.plain)
                     .padding(12)
                     .background(Color(uiColor: .secondarySystemGroupedBackground))

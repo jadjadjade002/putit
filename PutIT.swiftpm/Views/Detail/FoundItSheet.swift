@@ -42,7 +42,7 @@ struct FoundItSheet: View {
                     relocationFormView
                 }
             }
-            .navigationTitle(mode == .choice ? "หาเจอแล้ว!" : "ย้ายที่เก็บใหม่")
+            .navigationTitle(mode == .choice ? lang.text("found_it_button") : lang.text("relocate_title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -110,9 +110,9 @@ struct FoundItSheet: View {
             }
             
             VStack(spacing: 6) {
-                Text("หาเจอแล้ว!")
+                Text(lang.text("found_it_button"))
                     .font(.title2.bold())
-                Text("สิ่งของ: \(item.name)")
+                Text("\(lang.text("item_name_label")): \(item.name)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -128,7 +128,7 @@ struct FoundItSheet: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.title2)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("เก็บไว้ที่เดิม")
+                            Text(lang.text("still_here"))
                                 .font(.headline)
                             Text(item.currentEntry?.locationSummary ?? "")
                                 .font(.caption)
@@ -153,9 +153,9 @@ struct FoundItSheet: View {
                         Image(systemName: "arrow.triangle.swap")
                             .font(.title2)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("ย้ายไปที่เก็บใหม่")
+                            Text(lang.text("relocate_new_spot"))
                                 .font(.headline)
-                            Text("ถ่ายรูปและปักหมุดที่เก็บใหม่")
+                            Text(lang.text("remember_flow_title"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

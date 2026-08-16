@@ -57,7 +57,7 @@ struct HomeView: View {
                             Circle()
                                 .fill(Color.red)
                                 .frame(width: 8, height: 8)
-                            Text("กำลังฟังเสียงพูด...")
+                            Text(lang.text("listening_voice"))
                                 .font(.caption.bold())
                                 .foregroundStyle(.red)
                             Spacer()
@@ -97,7 +97,7 @@ struct HomeView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "checklist")
                                 .font(.body.bold())
-                            Text("Smart Pack")
+                            Text(lang.text("smart_pack_title"))
                                 .font(.caption.bold())
                         }
                         .padding(.horizontal, 10)
@@ -284,7 +284,7 @@ struct HomeView: View {
                     Text(lang.text("no_items"))
                         .font(.headline)
                         .foregroundStyle(.primary)
-                    Text("แตะปุ่มถ่ายรูปเพื่อเริ่มจำที่เก็บของชิ้นแรก")
+                    Text(lang.text("no_items_sub"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }

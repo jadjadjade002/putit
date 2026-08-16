@@ -179,24 +179,30 @@ struct OnDeviceVisionService: Sendable {
     ) -> ImageRecognitionResult {
         var candidateScores: [String: (confidence: Double, score: Double, suggestion: PredictedItemSuggestion)] = [:]
         
-        let sceneNoiseIdentifiers = [
+        // Filter out broad generic scene noise and furniture
+        let sceneNoiseIdentifiers: Set<String> = [
             "indoor", "room", "furniture", "table", "floor", "desk", "black", "surface",
             "wood", "material", "lighting", "wall", "ceiling", "home", "building", "horizontal", "nobody",
             "structure", "structural", "structural_element", "construction", "indoor_space", "room_interior",
-            "architecture", "architectural", "abstract", "shape", "color", "shadow", "outdoors", "outside"
+            "architecture", "architectural", "abstract", "shape", "color", "shadow", "outdoors", "outside",
+            "electronic_device", "electronic_equipment", "commodity", "equipment", "device", "object",
+            "living_room", "bedroom", "kitchen", "office", "tableware", "cutlery"
         ]
         
-        // 1. Process Cropped/Focused Target Observations (High Weight 4.0x)
+        // 1. Process Cropped/Focused Target Observations (Focused on what is under the pin)
         for obs in croppedObservations.prefix(40) {
             let id = obs.identifier.lowercased()
-            if sceneNoiseIdentifiers.contains(where: { id == $0 || id.contains($0) }) { continue }
-            if obs.confidence < 0.003 { continue }
+            if sceneNoiseIdentifiers.contains(id) { continue }
+            if obs.confidence < 0.005 { continue }
             
-            let (displayName, category, icon, room, container, isPriorityItem) = mapAppleIdentifierToHumanName(id)
+            guard let (displayName, category, icon, room, container, isPriorityItem) = mapAppleIdentifierToHumanName(id) else {
+                continue
+            }
+            
             let rawConf = Double(obs.confidence)
-            let priorityBoost = isPriorityItem ? 1.4 : 1.0
-            let dynamicConf = min(max(rawConf * 3.0 * priorityBoost + 0.60, 0.70), 0.98)
-            let score = (rawConf * 4.0 + 1.5) * priorityBoost
+            let priorityBoost = isPriorityItem ? 1.5 : 1.0
+            let dynamicConf = min(max(rawConf * 2.5 * priorityBoost + 0.55, 0.70), 0.98)
+            let score = (rawConf * 4.0 + 2.0) * priorityBoost
             
             let suggestion = PredictedItemSuggestion(
                 name: displayName,
@@ -209,7 +215,7 @@ struct OnDeviceVisionService: Sendable {
             )
             
             if let existing = candidateScores[displayName] {
-                candidateScores[displayName] = (max(existing.confidence, dynamicConf), existing.score + score, existing.suggestion)
+                candidateScores[displayName] = (max(existing.confidence, dynamicConf), max(existing.score, score), existing.suggestion)
             } else {
                 candidateScores[displayName] = (dynamicConf, score, suggestion)
             }
@@ -218,14 +224,17 @@ struct OnDeviceVisionService: Sendable {
         // 2. Process Full Image Observations
         for obs in fullObservations.prefix(30) {
             let id = obs.identifier.lowercased()
-            if sceneNoiseIdentifiers.contains(where: { id == $0 || id.contains($0) }) { continue }
-            if obs.confidence < 0.005 { continue }
+            if sceneNoiseIdentifiers.contains(id) { continue }
+            if obs.confidence < 0.01 { continue }
             
-            let (displayName, category, icon, room, container, isPriorityItem) = mapAppleIdentifierToHumanName(id)
+            guard let (displayName, category, icon, room, container, isPriorityItem) = mapAppleIdentifierToHumanName(id) else {
+                continue
+            }
+            
             let rawConf = Double(obs.confidence)
             let priorityBoost = isPriorityItem ? 1.3 : 1.0
             let dynamicConf = min(max(rawConf * 2.0 * priorityBoost + 0.45, 0.55), 0.90)
-            let score = (rawConf * 1.2) * priorityBoost
+            let score = (rawConf * 1.5) * priorityBoost
             
             let suggestion = PredictedItemSuggestion(
                 name: displayName,
@@ -238,13 +247,13 @@ struct OnDeviceVisionService: Sendable {
             )
             
             if let existing = candidateScores[displayName] {
-                candidateScores[displayName] = (max(existing.confidence, dynamicConf), existing.score + score, existing.suggestion)
+                candidateScores[displayName] = (max(existing.confidence, dynamicConf), max(existing.score, score), existing.suggestion)
             } else {
                 candidateScores[displayName] = (dynamicConf, score, suggestion)
             }
         }
         
-        // 3. Check OCR Text for specific items
+        // 3. OCR Text specific items
         let combinedText = recognizedTexts.joined(separator: " ").lowercased()
         if combinedText.contains("passport") || combinedText.contains("thai") {
             let item = PredictedItemSuggestion(
@@ -263,7 +272,7 @@ struct OnDeviceVisionService: Sendable {
             candidateScores[def.name] = (0.75, 1.0, def)
         }
         
-        // Sort candidates by highest score
+        // Sort candidates strictly by highest single matching score
         let sorted = candidateScores.values.sorted { $0.score > $1.score }.map { $0.suggestion }
         let top4 = Array(sorted.prefix(4))
         let primary = top4.first!
@@ -280,40 +289,45 @@ struct OnDeviceVisionService: Sendable {
     }
     
     /// Translates Apple Vision identifier into formatted Bilingual Name, Category, Icon, Room, and Priority flag
-    private static func mapAppleIdentifierToHumanName(_ identifier: String) -> (name: String, category: String, icon: String, room: String, container: String, isPriority: Bool) {
+    private static func mapAppleIdentifierToHumanName(_ identifier: String) -> (name: String, category: String, icon: String, room: String, container: String, isPriority: Bool)? {
         let id = identifier.lowercased()
         
-        // 1. Electronics & Computing (High Priority)
-        if id.contains("mouse") || id.contains("trackball") || id.contains("touchpad") || id.contains("pointing_device") {
+        // Ignore pure room / furniture words
+        if id == "table" || id == "desk" || id == "chair" || id == "furniture" || id == "floor" || id == "wall" || id == "room" || id == "computer" {
+            return nil
+        }
+        
+        // 1. Electronics & Computing (Strict Matching)
+        if id.contains("mouse") || id.contains("trackball") || id.contains("touchpad") || id == "pointing_device" {
             return ("เมาส์ (Mouse)", "Electronics", "computermouse.fill", "ห้องทำงาน", "โต๊ะทำงาน", true)
         }
         if id.contains("keyboard") || id.contains("keypad") || id.contains("typewriter") {
             return ("คีย์บอร์ด (Keyboard)", "Electronics", "keyboard.fill", "ห้องทำงาน", "โต๊ะทำงาน", true)
         }
-        if id.contains("laptop") || id.contains("notebook") || id.contains("macbook") || id.contains("computer") {
+        if id == "laptop" || id == "laptop_computer" || id == "notebook_computer" || id.contains("macbook") {
             return ("โน้ตบุ๊ก (Laptop)", "Electronics", "laptopcomputer", "ห้องทำงาน", "โต๊ะทำงาน", true)
         }
-        if id.contains("tablet") || id.contains("ipad") || id.contains("screen") || id.contains("display") || id.contains("monitor") {
-            return ("แท็บเล็ต / iPad (Tablet)", "Electronics", "ipad", "ห้องทำงาน", "โต๊ะทำงาน", true)
+        if id.contains("tablet") || id.contains("ipad") || id == "screen" || id == "monitor" || id.contains("display") {
+            return ("แท็บเล็ต / จอภาพ (Tablet)", "Electronics", "ipad", "ห้องทำงาน", "โต๊ะทำงาน", true)
         }
-        if id.contains("phone") || id.contains("smartphone") || id.contains("iphone") || id.contains("cellular") || id.contains("mobile") {
+        if id.contains("phone") || id.contains("smartphone") || id.contains("iphone") || id.contains("cellular") {
             return ("โทรศัพท์มือถือ (Phone)", "Electronics", "iphone", "ห้องนั่งเล่น", "โต๊ะกลาง", true)
         }
         if id.contains("headphone") || id.contains("earphone") || id.contains("airpod") || id.contains("earbud") || id.contains("headset") {
             return ("หูฟัง (Headphones / Earphones)", "Electronics", "headphones", "ห้องทำงาน", "โต๊ะทำงาน", true)
         }
-        if id.contains("charger") || id.contains("cable") || id.contains("cord") || id.contains("adapter") || id.contains("powerbank") || id.contains("usb") || id.contains("plug") {
+        if id.contains("charger") || id.contains("cable") || id.contains("power_cord") || id.contains("adapter") || id.contains("powerbank") || id.contains("usb") || id.contains("plug") {
             return ("สายชาร์จ / Powerbank (Charger)", "Electronics", "bolt.fill", "ห้องทำงาน", "กล่องจัดระเบียบ", true)
         }
-        if id.contains("remote") || id.contains("clicker") || id.contains("transmitter") {
+        if id.contains("remote") || id.contains("clicker") {
             return ("รีโมท (Remote Control)", "Electronics", "appletvremote.gen4.fill", "ห้องนั่งเล่น", "โต๊ะกลาง", true)
         }
-        if id.contains("game") || id.contains("controller") || id.contains("joystick") || id.contains("gamepad") || id.contains("console") || id.contains("nintendo") || id.contains("playstation") {
+        if id.contains("gamepad") || id.contains("joystick") || id.contains("game_controller") || id.contains("nintendo") || id.contains("playstation") {
             return ("เครื่องเล่นเกม / จอย (Gaming)", "Electronics", "gamecontroller.fill", "ห้องนั่งเล่น", "ชั้นวางทีวี", true)
         }
         
         // 2. Wallets, Keys & Valuables (High Priority)
-        if id.contains("wallet") || id.contains("billfold") || id.contains("purse") || id.contains("moneybag") || id.contains("pocketbook") || id.contains("cardholder") || id.contains("clutch") {
+        if id.contains("wallet") || id.contains("billfold") || id.contains("purse") || id.contains("cardholder") {
             return ("กระเป๋าสตางค์ (Wallet)", "Valuables", "wallet.bifold.fill", "ห้องนั่งเล่น", "โต๊ะทำงาน / ลิ้นชัก", true)
         }
         if id.contains("key") || id.contains("keychain") || id.contains("keyring") || id.contains("fob") {
@@ -333,13 +347,13 @@ struct OnDeviceVisionService: Sendable {
         }
         
         // 3. Skincare, Cosmetics & Medicines (High Priority)
-        if id.contains("tube") || id.contains("ointment") || id.contains("cream") || id.contains("lotion") || id.contains("sunscreen") || id.contains("cosmetic") || id.contains("serum") || id.contains("gel") {
+        if id.contains("tube") || id.contains("ointment") || id.contains("cream") || id.contains("lotion") || id.contains("sunscreen") || id.contains("serum") || id.contains("gel") {
             return ("หลอดครีม / โลชั่น (Lotion/Cream)", "General", "sparkles", "ห้องนอนใหญ่", "โต๊ะเครื่องแป้ง", true)
         }
-        if id.contains("pill") || id.contains("medicine") || id.contains("drug") || id.contains("capsule") || id.contains("syrup") || id.contains("bandage") || id.contains("first_aid") {
+        if id.contains("pill") || id.contains("medicine") || id.contains("drug") || id.contains("capsule") || id.contains("vitamin") || id.contains("bandage") || id.contains("first_aid") {
             return ("ยาสามัญ / วิตามิน (Medicine)", "Medicines", "cross.case.fill", "ห้องครัว", "ตู้ยา", true)
         }
-        if id.contains("perfume") || id.contains("fragrance") || id.contains("spray") || id.contains("deodorant") {
+        if id.contains("perfume") || id.contains("fragrance") || id.contains("spray") {
             return ("น้ำหอม / สเปรย์ (Perfume)", "General", "sparkles", "ห้องนอนใหญ่", "โต๊ะเครื่องแป้ง", true)
         }
         if id.contains("comb") || id.contains("hairbrush") || id.contains("brush") {
@@ -347,11 +361,14 @@ struct OnDeviceVisionService: Sendable {
         }
         
         // 4. Documents, Books & Stationery (High Priority)
-        if id.contains("passport") || id.contains("visa") || id.contains("document") || id.contains("certificate") || id.contains("paper") {
-            return ("หนังสือเดินทาง / เอกสาร (Passport/Document)", "Documents", "doc.text.fill", "ห้องนอนใหญ่", "ตู้เซฟ", true)
+        if id.contains("passport") || id.contains("visa") || id.contains("certificate") {
+            return ("หนังสือเดินทาง / วีซ่า (Passport)", "Documents", "doc.text.fill", "ห้องนอนใหญ่", "ตู้เซฟ", true)
         }
-        if id.contains("book") || id.contains("novel") || id.contains("textbook") || id.contains("journal") || id.contains("diary") {
+        if id.contains("notebook") || id.contains("book") || id.contains("journal") || id.contains("binder") || id.contains("diary") {
             return ("หนังสือ / สมุดบันทึก (Book/Notebook)", "General", "book.fill", "ห้องทำงาน", "ชั้นวางหนังสือ", true)
+        }
+        if id.contains("document") || id.contains("paper") {
+            return ("เอกสารสำคัญ (Document)", "Documents", "doc.text.fill", "ห้องทำงาน", "ตู้เอกสาร", true)
         }
         if id.contains("pen") || id.contains("pencil") || id.contains("marker") || id.contains("highlighter") {
             return ("ปากกา / ดินสอ (Pen/Pencil)", "Tools", "pencil", "ห้องทำงาน", "กล่องใส่ปากกา", true)
@@ -367,25 +384,25 @@ struct OnDeviceVisionService: Sendable {
         if id.contains("cup") || id.contains("mug") || id.contains("glass") || id.contains("tumbler") {
             return ("แก้วน้ำ (Cup/Mug)", "General", "cup.and.saucer.fill", "ห้องครัว", "ชั้นวางแก้ว", true)
         }
-        if id.contains("backpack") || id.contains("bag") || id.contains("luggage") || id.contains("suitcase") || id.contains("briefcase") {
+        if id.contains("backpack") || id.contains("bag") || id.contains("luggage") || id.contains("suitcase") {
             return ("กระเป๋าเป้ / กระเป๋าเดินทาง (Bag/Luggage)", "General", "bag.fill", "ห้องนอนใหญ่", "ตู้เสื้อผ้า", true)
         }
         if id.contains("umbrella") || id.contains("parasol") {
             return ("ร่มกันฝน (Umbrella)", "General", "umbrella.fill", "หน้าบ้าน", "ที่วางร่ม", true)
         }
-        if id.contains("shoe") || id.contains("sneaker") || id.contains("boot") || id.contains("sandal") || id.contains("slipper") {
+        if id.contains("shoe") || id.contains("sneaker") || id.contains("sandal") || id.contains("slipper") {
             return ("รองเท้า (Shoes)", "General", "shoeprints.fill", "หน้าบ้าน", "ตู้รองเท้า", false)
         }
         
         // 6. Tools & Hardware
-        if id.contains("screwdriver") || id.contains("wrench") || id.contains("hammer") || id.contains("pliers") || id.contains("drill") || id.contains("tool") {
+        if id.contains("screwdriver") || id.contains("wrench") || id.contains("hammer") || id.contains("pliers") || id.contains("drill") {
             return ("เครื่องมือช่าง (Tools)", "Tools", "wrench.adjustable.fill", "โรงรถ", "กล่องเครื่องมือ", true)
         }
         if id.contains("battery") || id.contains("flashlight") || id.contains("torch") {
             return ("ถ่านไฟฉาย / ไฟฉาย (Flashlight/Battery)", "Tools", "flashlight.on.fill", "ห้องนั่งเล่น", "ลิ้นชัก", true)
         }
         
-        // Dynamic fallback
+        // Dynamic fallback for any other specific object
         let formattedName = id
             .replacingOccurrences(of: "_", with: " ")
             .capitalized

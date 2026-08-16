@@ -5,24 +5,29 @@ struct SmartPackView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var lang = LanguageManager.shared
-    @Query(sort: \ItemMemory.createdAt, order: .reverse) private var allItems: [ItemMemory]
     
-    @State private var allTemplates: [PackTemplate] = PackService.defaultTemplates
+    @Query private var allItems: [ItemMemory]
+    
     @State private var selectedTemplateIndex: Int = 0
+    @State private var allTemplates: [PackTemplate] = PackService.defaultTemplates
+    
+    // Checked items state dictionary: [templateId_itemName: Bool]
     @State private var packedState: [String: Bool] = [:]
+    
+    // Custom user-added items dictionary: [templateId: [String]]
     @State private var customItems: [String: [String]] = [:]
     
-    // Alerts
-    @State private var showAddItemSheet: Bool = false
-    @State private var newItemText: String = ""
+    // Sheet alerts for adding custom sets and items
     @State private var showAddSetSheet: Bool = false
+    @State private var showAddItemSheet: Bool = false
     @State private var newSetNameText: String = ""
+    @State private var newItemText: String = ""
     
     private var currentTemplate: PackTemplate {
-        if selectedTemplateIndex < allTemplates.count {
-            return allTemplates[selectedTemplateIndex]
+        guard selectedTemplateIndex < allTemplates.count else {
+            return allTemplates.first ?? PackService.defaultTemplates[0]
         }
-        return allTemplates.first ?? PackService.defaultTemplates[0]
+        return allTemplates[selectedTemplateIndex]
     }
     
     private var activeItemList: [String] {
@@ -38,6 +43,15 @@ struct SmartPackView: View {
     private var progressPercentage: Double {
         guard !activeItemList.isEmpty else { return 0.0 }
         return Double(packedCount) / Double(activeItemList.count)
+    }
+    
+    private func localizedTemplateTitle(_ template: PackTemplate) -> String {
+        switch template.id {
+        case "travel": return lang.text("pack_travel")
+        case "work": return lang.text("pack_work")
+        case "daily": return lang.text("pack_daily")
+        default: return template.title
+        }
     }
     
     var body: some View {
@@ -59,21 +73,6 @@ struct SmartPackView: View {
             .navigationTitle(lang.text("smart_pack_title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: { showAddSetSheet = true }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "plus")
-                            Text(lang.text("new_pack_set"))
-                        }
-                        .font(.body.bold())
-                        .foregroundStyle(Color.indigo)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-                
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { dismiss() }) {
                         Text(lang.text("done"))
@@ -98,7 +97,7 @@ struct SmartPackView: View {
                 Button(lang.text("save"), action: addCustomItem)
                 Button(lang.text("cancel"), role: .cancel) { newItemText = "" }
             } message: {
-                Text("\(currentTemplate.title)")
+                Text(localizedTemplateTitle(currentTemplate))
             }
         }
     }
@@ -109,7 +108,7 @@ struct SmartPackView: View {
         let newTpl = PackTemplate(
             id: "custom_\(UUID().uuidString.prefix(6))",
             title: trimmed,
-            subtitle: "รายการที่กำหนดเอง",
+            subtitle: lang.text("pack_custom"),
             icon: "bag.fill",
             color: .purple,
             defaultItems: []
@@ -144,7 +143,7 @@ struct SmartPackView: View {
                         HStack(spacing: 8) {
                             Image(systemName: template.icon)
                                 .font(.subheadline)
-                            Text(template.title.components(separatedBy: " (").first ?? template.title)
+                            Text(localizedTemplateTitle(template))
                                 .font(.subheadline.bold())
                         }
                         .padding(.horizontal, 14)
@@ -156,6 +155,26 @@ struct SmartPackView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                
+                // Add New Set Button at the end of scenario pills
+                Button(action: { showAddSetSheet = true }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus")
+                        Text(lang.text("new_pack_set"))
+                    }
+                    .font(.subheadline.bold())
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .foregroundStyle(Color.indigo)
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(Color.indigo.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [4]))
+                    )
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal)
         }
@@ -166,7 +185,7 @@ struct SmartPackView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(currentTemplate.title)
+                    Text(localizedTemplateTitle(currentTemplate))
                         .font(.headline)
                     Text("\(lang.text("pack_progress_label")) \(packedCount) / \(activeItemList.count)")
                         .font(.caption)
@@ -209,7 +228,7 @@ struct SmartPackView: View {
                 )
             }
             
-            // Prominent Box Button at the bottom of checklist
+            // Single Prominent Box Button at the bottom of checklist
             Button(action: { showAddItemSheet = true }) {
                 HStack(spacing: 8) {
                     Image(systemName: "plus.circle.fill")
@@ -253,6 +272,7 @@ struct PackItemRow: View {
     let isPacked: Bool
     let matchedItem: ItemMemory?
     let onToggle: () -> Void
+    @ObservedObject private var lang = LanguageManager.shared
     
     var body: some View {
         HStack(spacing: 12) {
@@ -285,7 +305,7 @@ struct PackItemRow: View {
                                 .lineLimit(1)
                         }
                     } else {
-                        Text("ยังไม่มีรูปหรือจุดปักในระบบ")
+                        Text(lang.text("no_photo_in_system"))
                             .font(.caption2)
                             .foregroundStyle(.secondary.opacity(0.8))
                     }
@@ -310,7 +330,7 @@ struct PackItemRow: View {
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8)
                                         .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-                                )
+                                 )
                         } else {
                             Image(systemName: "photo")
                                 .font(.caption)
