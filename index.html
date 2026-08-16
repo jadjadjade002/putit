@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PutIT — Spatial Memory & Smart Pack Assistant</title>
+  <meta name="description" content="On-Device Spatial Intelligence for Stored Items with AI Auto-Pinning & Smart Pack">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-viewport">
+    <!-- Header -->
+    <header class="app-header">
+      <button class="icon-btn" onclick="openSettings()" aria-label="Settings">⚙️</button>
+      <div class="app-title" data-i18n="app_title">PutIT</div>
+      <div class="header-actions">
+        <button class="smart-pack-pill-btn" onclick="openSmartPack()">
+          <span>🧳</span>
+          <span data-i18n="smart_pack">Smart Pack</span>
+        </button>
+        <button class="icon-btn" onclick="startRememberFlow()" aria-label="Add Item">➕</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="content-body">
+      <!-- Search Bar -->
+      <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" data-i18n="search_placeholder" placeholder="ค้นหาสิ่งของ (เช่น กุญแจ, พาสปอร์ต)" />
+        <button id="micBtn" class="mic-btn" aria-label="Voice Search">🎙️</button>
+      </div>
+
+      <!-- Voice Status Indicator -->
+      <div id="voiceStatus" class="voice-status-bar" style="display: none;">
+        <span>🔴</span>
+        <span>กำลังฟังเสียงพูดของคุณ...</span>
+      </div>
+
+      <!-- Big Hero Action Card (100% Focused on Taking Photos) -->
+      <button class="hero-card" onclick="startRememberFlow()">
+        <div class="hero-card-left">
+          <div class="hero-icon-box">📸</div>
+          <div>
+            <div class="hero-card-title" data-i18n="remember_hero">+ ถ่ายรูปจำที่เก็บของใหม่</div>
+            <div class="hero-card-sub" data-i18n="remember_sub">AI ตรวจจับสิ่งของ & ปักหมุดตำแหน่งภาพให้อัตโนมัติ</div>
+          </div>
+        </div>
+        <div>❯</div>
+      </button>
+
+      <!-- Category Filter Pills -->
+      <div class="category-scroll">
+        <button class="category-pill active" data-cat="all">ทั้งหมด</button>
+        <button class="category-pill" data-cat="Keys">🔑 กุญแจ</button>
+        <button class="category-pill" data-cat="Documents">📄 เอกสาร/พาสปอร์ต</button>
+        <button class="category-pill" data-cat="Electronics">🎮 เกม/ไอที</button>
+        <button class="category-pill" data-cat="Medicines">💊 ยา/สุขภาพ</button>
+        <button class="category-pill" data-cat="Tools">🛠️ เครื่องมือ</button>
+      </div>
+
+      <!-- Saved Items Section -->
+      <div class="section-header">
+        <span data-i18n="saved_items">ของที่บันทึกไว้</span>
+        <span id="itemsCount" style="font-size: 14px; color: var(--text-secondary);">(0)</span>
+      </div>
+
+      <!-- Items List -->
+      <div id="itemsList" class="items-grid"></div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon">📷</div>
+        <div class="empty-title" data-i18n="no_items">ยังไม่มีสิ่งของในระบบ</div>
+        <div class="empty-sub" data-i18n="no_items_sub">แตะปุ่มถ่ายรูปด้านบนเพื่อเริ่มจำที่เก็บของชิ้นแรก</div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL 1: Remember Flow (Step 1 & Step 2) -->
+  <div id="rememberModal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <button class="modal-header-btn cancel" onclick="closeModal('rememberModal')" data-i18n="cancel">ยกเลิก</button>
+        <div class="modal-title" id="rememberFlowTitle" data-i18n="step1_title">1. ถ่ายรูป & ปักหมุด</div>
+        <button id="rememberNextBtn" class="modal-header-btn" onclick="goToRememberStep2()" data-i18n="next">ถัดไป</button>
+        <button id="rememberSaveBtn" class="modal-header-btn" onclick="saveRememberItem()" style="display: none;" data-i18n="save">บันทึก</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- STEP 1: Photo & Pin -->
+        <div id="step1Container" style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- Canvas Section (Shown after photo uploaded) -->
+          <div id="canvasSection" style="display: none;">
+            <div id="canvasContainer" class="canvas-container">
+              <img id="pinCanvasImg" class="canvas-img" src="" alt="Stored Spot" />
+              <div id="pulsingPin" class="pulsing-pin"></div>
+            </div>
+            
+            <!-- AI Predictions Bar -->
+            <div class="ai-box" style="margin-top: 12px;">
+              <div id="aiStatusText" class="ai-status-text">✨ AI ตรวจพบวัตถุ & ปักหมุดให้อัตโนมัติ</div>
+              <div id="aiChipsRow" class="ai-chips-row"></div>
+            </div>
+          </div>
+
+          <!-- Photo Buttons Section -->
+          <div id="photoButtonsSection" style="display: flex; flex-direction: column; gap: 12px; padding: 24px 0;">
+            <label class="btn-primary" style="cursor: pointer;">
+              <span>📸</span>
+              <span data-i18n="take_photo">ถ่ายรูป / เลือกภาพ</span>
+              <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="handleImageUpload(event)" />
+            </label>
+            <button class="btn-secondary" onclick="goToRememberStep2()" data-i18n="skip_photo">ข้ามรูปถ่าย (บันทึกข้อความอย่างเดียว)</button>
+          </div>
+        </div>
+
+        <!-- STEP 2: Details Form -->
+        <div id="step2Container" style="display: none; flex-direction: column; gap: 14px;">
+          <!-- Item Name -->
+          <div class="form-group">
+            <label class="form-label" data-i18n="item_name">ชื่อสิ่งของ</label>
+            <input type="text" id="itemNameInput" class="form-input" placeholder="เช่น พาสปอร์ต, กุญแจรถ" />
+          </div>
+
+          <!-- Room -->
+          <div class="form-group">
+            <label class="form-label" data-i18n="room_label">ห้อง</label>
+            <div id="roomChips" class="chips-cloud">
+              <button class="chip-btn">ห้องนอนใหญ่</button>
+              <button class="chip-btn">ห้องนั่งเล่น</button>
+              <button class="chip-btn">ห้องครัว</button>
+              <button class="chip-btn">หน้าบ้าน</button>
+              <button class="chip-btn">ห้องทำงาน</button>
+              <button class="chip-btn">โรงรถ</button>
+            </div>
+            <input type="text" id="roomInput" class="form-input" placeholder="ระบุห้อง..." />
+          </div>
+
+          <!-- Container -->
+          <div class="form-group">
+            <label class="form-label" data-i18n="container_label">ที่เก็บ / เฟอร์นิเจอร์</label>
+            <div id="containerChips" class="chips-cloud">
+              <button class="chip-btn">ลิ้นชัก</button>
+              <button class="chip-btn">โต๊ะทำงาน</button>
+              <button class="chip-btn">ตู้เซฟ</button>
+              <button class="chip-btn">ชั้นวางของ</button>
+              <button class="chip-btn">ตู้เสื้อผ้า</button>
+            </div>
+            <input type="text" id="containerInput" class="form-input" placeholder="ระบุที่เก็บ..." />
+          </div>
+
+          <!-- SubSpot -->
+          <div class="form-group">
+            <label class="form-label" data-i18n="subspot_label">จุดย่อย / มุมที่วาง</label>
+            <div id="subSpotChips" class="chips-cloud">
+              <button class="chip-btn">ชั้นบนสุด</button>
+              <button class="chip-btn">ชั้นล่างสุด</button>
+              <button class="chip-btn">ถาดไม้วางของ</button>
+              <button class="chip-btn">มุมซ้าย</button>
+            </div>
+            <input type="text" id="subSpotInput" class="form-input" placeholder="ระบุจุดย่อย..." />
+          </div>
+
+          <!-- Notes -->
+          <div class="form-group">
+            <label class="form-label" data-i18n="notes_label">หมายเหตุ</label>
+            <input type="text" id="notesInput" class="form-input" placeholder="หมายเหตุเพิ่มเติม..." />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Smart Pack & Checklist -->
+  <div id="smartPackModal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div style="width: 40px;"></div>
+        <div class="modal-title">🧳 Smart Pack</div>
+        <button class="modal-header-btn" onclick="closeModal('smartPackModal')" data-i18n="done">เสร็จ</button>
+      </div>
+      <div class="modal-body">
+        <!-- Scenario Selector -->
+        <div id="packScenarioScroll" class="category-scroll">
+          <button class="category-pill active" onclick="switchPackTemplate(0)">✈️ เดินทาง (Travel)</button>
+          <button class="category-pill" onclick="switchPackTemplate(1)">💼 ทำงาน (Work)</button>
+          <button class="category-pill" onclick="switchPackTemplate(2)">🏃 ประจำวัน (Daily)</button>
+        </div>
+
+        <!-- Progress Box -->
+        <div class="progress-box">
+          <div id="packProgressText" style="font-size: 14px; font-weight: 700;">เตรียมของแล้ว 0 จาก 5 ชิ้น (0%)</div>
+          <div class="progress-bar-bg">
+            <div id="packProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Checklist -->
+        <div id="packItemsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Item Detail & Memory Trail -->
+  <div id="detailModal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <button class="modal-header-btn cancel" onclick="closeModal('detailModal')" data-i18n="back">ย้อนกลับ</button>
+        <div class="modal-title" id="detailTitle">Item Detail</div>
+        <button class="modal-header-btn" onclick="deleteCurrentItem()" style="color: var(--red);">🗑️</button>
+      </div>
+      <div class="modal-body">
+        <!-- Visual Anchor -->
+        <div id="detailPinContainer" class="canvas-container">
+          <img id="detailCanvasImg" class="canvas-img" src="" alt="Detail Spot" />
+          <div id="detailPulsingPin" class="pulsing-pin"></div>
+        </div>
+
+        <!-- Location Card -->
+        <div class="form-group">
+          <div style="font-size: 16px; font-weight: 700; color: var(--primary);">📍 ตำแหน่งปัจจุบัน</div>
+          <div style="font-size: 14px; margin-top: 4px;">ห้อง: <strong id="detailRoom">-</strong></div>
+          <div style="font-size: 14px;">ที่เก็บ: <strong id="detailContainer">-</strong></div>
+          <div style="font-size: 14px;">จุดย่อย: <strong id="detailSubSpot">-</strong></div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;" id="detailNotes"></div>
+        </div>
+
+        <!-- Actions -->
+        <button class="btn-primary" style="background: var(--green);" onclick="markAsFound()" data-i18n="found_it">
+          <span>✓</span>
+          <span>หาเจอแล้ว! (Found It)</span>
+        </button>
+
+        <!-- Memory Trail -->
+        <div class="form-group">
+          <div style="font-size: 14px; font-weight: 700;">🕒 ประวัติการย้ายที่เก็บ (Memory Trail)</div>
+          <div id="detailTrailBox" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Settings & 15 Languages -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div style="width: 40px;"></div>
+        <div class="modal-title">⚙️ ตั้งค่า (Settings)</div>
+        <button class="modal-header-btn" onclick="closeModal('settingsModal')" data-i18n="done">เสร็จ</button>
+      </div>
+      <div class="modal-body">
+        <!-- Language Option -->
+        <div class="checklist-item" onclick="openLanguageSheet()">
+          <span>🌐</span>
+          <div style="flex:1;">
+            <div style="font-weight: 700;">ภาษา (Language)</div>
+            <div id="currentLangDisplay" style="font-size: 12px; color: var(--text-secondary);">🇹🇭 ภาษาไทย (Thai)</div>
+          </div>
+          <div>❯</div>
+        </div>
+
+        <!-- Demo Data -->
+        <div class="checklist-item" onclick="resetDemoData()">
+          <span>🔄</span>
+          <div style="flex:1; font-weight: 700; color: var(--primary);" data-i18n="demo_data">โหลดข้อมูลตัวอย่างสำหรับสาธิต</div>
+          <div>❯</div>
+        </div>
+
+        <!-- Architecture Info -->
+        <div class="form-group" style="font-size: 13px; color: var(--text-secondary);">
+          <div>📡 Network: <strong>Offline 100% (Client-Side)</strong></div>
+          <div style="margin-top: 4px;">🧠 AI: <strong>Apple Vision Saliency & Neural Engine</strong></div>
+          <div style="margin-top: 4px;">💾 Storage: <strong>Local Client Storage</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: Language Picker Sheet -->
+  <div id="languageModal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <button class="modal-header-btn cancel" onclick="closeModal('languageModal')" data-i18n="back">ย้อนกลับ</button>
+        <div class="modal-title" data-i18n="language_title">เลือกภาษา (15)</div>
+        <div style="width: 40px;"></div>
+      </div>
+      <div class="modal-body" id="languagesList"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
