@@ -496,23 +496,18 @@ struct RememberFlowView: View {
     private func saveItem() {
         guard !isSaveDisabled else { return }
         
+        let imgData = pickedImage.flatMap { ImageManager.prepareImageForStorage($0) }
+        
         let newEntry = MemoryEntry(
             room: room.trimmingCharacters(in: .whitespaces),
             container: container.trimmingCharacters(in: .whitespaces).isEmpty ? "โต๊ะ / ตู้" : container.trimmingCharacters(in: .whitespaces),
             subSpot: subSpot.trimmingCharacters(in: .whitespaces),
+            note: note.trimmingCharacters(in: .whitespaces),
+            imageData: imgData,
             anchorX: anchorX,
             anchorY: anchorY,
-            note: note.trimmingCharacters(in: .whitespaces),
-            isPrimarySpot: true
+            isCurrent: true
         )
-        
-        // Save image if present
-        if let image = pickedImage {
-            let filename = "item_\(UUID().uuidString).jpg"
-            if ImageManager.shared.saveImage(image, filename: filename) {
-                newEntry.imageFilename = filename
-            }
-        }
         
         var tags: [String] = []
         if let ai = aiResult {

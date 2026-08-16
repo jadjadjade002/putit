@@ -131,13 +131,13 @@ struct LocalSearchService {
             
             // 3. Tags & Category Matching
             if maxScore < 70 {
-                if phoneticTags.contains(where: { $0.contains(phoneticQuery) || phoneticQuery.contains($0) }) {
+                if itemTags.contains(where: { $0.contains(cleanQuery) || cleanQuery.contains($0) }) || phoneticTags.contains(where: { $0.contains(phoneticQuery) || phoneticQuery.contains($0) }) {
                     maxScore = max(maxScore, 65)
                     reason = "Matched in search tags"
-                } else if phoneticCategory.contains(phoneticQuery) || phoneticLocation.contains(phoneticQuery) {
+                } else if itemCategory.contains(cleanQuery) || itemLocation.contains(cleanQuery) || phoneticCategory.contains(phoneticQuery) || phoneticLocation.contains(phoneticQuery) {
                     maxScore = max(maxScore, 50)
                     reason = "Matched in location / category"
-                } else if phoneticNote.contains(phoneticQuery) {
+                } else if itemNote.contains(cleanQuery) || phoneticNote.contains(phoneticQuery) {
                     maxScore = max(maxScore, 40)
                     reason = "Matched in note"
                 }
