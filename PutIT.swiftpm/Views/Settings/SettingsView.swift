@@ -51,16 +51,16 @@ struct SettingsView: View {
                 // Section 2: Demo Guide
                 Section(header: Text(langManager.text("demo_guide_section"))) {
                     VStack(alignment: .leading, spacing: 10) {
-                        demoStepRow(number: "1", title: "AI Auto-Pin", desc: "ถ่ายรูปสิ่งของ AI จะตรวจจับและปักหมุดตำแหน่งให้อัตโนมัติ")
-                        demoStepRow(number: "2", title: "Smart Pack", desc: "ระบบจัดของอัจฉริยะ ดึงรูปและตำแหน่งของที่ต้องเตรียมทันที")
-                        demoStepRow(number: "3", title: "Voice Search", desc: "ค้นหาด้วยเสียงพูดภาษาธรรมชาติ ค้นเจอทันที")
-                        demoStepRow(number: "4", title: "Memory Trail", desc: "บันทึกและติดตามประวัติการย้ายที่เก็บย้อนหลัง")
+                        demoStepRow(number: "1", title: "AI Auto-Pin", desc: langManager.text("guide_step1_desc"))
+                        demoStepRow(number: "2", title: "Smart Pack", desc: langManager.text("guide_step2_desc"))
+                        demoStepRow(number: "3", title: "Voice Search", desc: langManager.text("guide_step3_desc"))
+                        demoStepRow(number: "4", title: "Memory Trail", desc: langManager.text("guide_step4_desc"))
                     }
                     .padding(.vertical, 4)
                 }
                 
                 // Section 3: Demo Data Reset
-                Section(header: Text("Demo Data")) {
+                Section(header: Text(langManager.text("demo_data_header"))) {
                     Button(role: .destructive, action: { showResetAlert = true }) {
                         Label(langManager.text("reset_data"), systemImage: "arrow.counterclockwise")
                             .foregroundStyle(.red)
@@ -73,21 +73,21 @@ struct SettingsView: View {
                 // Section 4: Architecture & Privacy
                 Section(header: Text(langManager.text("tech_privacy"))) {
                     HStack {
-                        Label("Network Status", systemImage: "antenna.radiowaves.left.and.right.slash")
+                        Label(langManager.text("network_status_label"), systemImage: "antenna.radiowaves.left.and.right.slash")
                         Spacer()
                         Text(langManager.text("offline_status"))
                             .foregroundStyle(.secondary)
                     }
                     
                     HStack {
-                        Label("AI Engine", systemImage: "brain.head.profile")
+                        Label(langManager.text("ai_engine_label"), systemImage: "brain.head.profile")
                         Spacer()
                         Text("Apple Neural Engine (1,300+ Vision)")
                             .foregroundStyle(.secondary)
                     }
                     
                     HStack {
-                        Label("Local Storage", systemImage: "internaldrive.fill")
+                        Label(langManager.text("local_storage_label"), systemImage: "internaldrive.fill")
                         Spacer()
                         Text("Apple SwiftData")
                             .foregroundStyle(.secondary)

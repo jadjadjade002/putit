@@ -22,9 +22,9 @@ struct FoundItSheet: View {
     @State private var subSpot: String = ""
     @State private var moveReason: String = ""
     
-    let roomChips: [String] = ["ห้องนอนใหญ่", "ห้องนั่งเล่น", "ห้องครัว", "หน้าบ้าน", "ห้องทำงาน", "โรงรถ"]
-    let containerChips: [String] = ["ลิ้นชัก", "โต๊ะทำงาน", "ตู้เซฟ", "ชั้นวางของ", "ตู้เสื้อผ้า", "ที่แขวนผนัง"]
-    let subSpotChips: [String] = ["ชั้นบนสุด", "ชั้นล่างสุด", "ถาดไม้วางของ", "มุมซ้ายหน้า", "มุมขวา"]
+    let roomChipKeys: [String] = ["room_bedroom", "room_living", "room_kitchen", "room_front", "room_office", "room_garage"]
+    let containerChipKeys: [String] = ["cont_drawer", "cont_desk", "cont_safe", "cont_shelf", "cont_closet", "cont_hanger"]
+    let subSpotChipKeys: [String] = ["spot_top", "spot_bottom", "spot_tray", "spot_left", "spot_right", "spot_organizer"]
     
     enum FoundMode {
         case choice
@@ -247,7 +247,8 @@ struct FoundItSheet: View {
                         .foregroundStyle(.secondary)
                     
                     FlowLayout(spacing: 6) {
-                        ForEach(roomChips, id: \.self) { r in
+                        ForEach(roomChipKeys, id: \.self) { key in
+                            let r = lang.text(key)
                             Button(action: { self.room = r }) {
                                 Text(r)
                                     .font(.caption.bold())
@@ -262,7 +263,7 @@ struct FoundItSheet: View {
                         }
                     }
                     
-                    TextField("ห้อง", text: $room)
+                    TextField(lang.text("select_room"), text: $room)
                         .textFieldStyle(.roundedBorder)
                 }
                 .padding(.horizontal)
@@ -274,7 +275,8 @@ struct FoundItSheet: View {
                         .foregroundStyle(.secondary)
                     
                     FlowLayout(spacing: 6) {
-                        ForEach(containerChips, id: \.self) { c in
+                        ForEach(containerChipKeys, id: \.self) { key in
+                            let c = lang.text(key)
                             Button(action: { self.container = c }) {
                                 Text(c)
                                     .font(.caption.bold())
@@ -289,7 +291,7 @@ struct FoundItSheet: View {
                         }
                     }
                     
-                    TextField("ที่เก็บ / เฟอร์นิเจอร์", text: $container)
+                    TextField(lang.text("select_container"), text: $container)
                         .textFieldStyle(.roundedBorder)
                 }
                 .padding(.horizontal)
@@ -301,7 +303,8 @@ struct FoundItSheet: View {
                         .foregroundStyle(.secondary)
                     
                     FlowLayout(spacing: 6) {
-                        ForEach(subSpotChips, id: \.self) { s in
+                        ForEach(subSpotChipKeys, id: \.self) { key in
+                            let s = lang.text(key)
                             Button(action: { self.subSpot = s }) {
                                 Text(s)
                                     .font(.caption.bold())
@@ -316,7 +319,7 @@ struct FoundItSheet: View {
                         }
                     }
                     
-                    TextField("จุดย่อย / มุมที่วาง", text: $subSpot)
+                    TextField(lang.text("select_subspot"), text: $subSpot)
                         .textFieldStyle(.roundedBorder)
                 }
                 .padding(.horizontal)

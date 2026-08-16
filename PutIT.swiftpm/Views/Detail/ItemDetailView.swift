@@ -145,7 +145,7 @@ struct ItemDetailView: View {
                             Text(lang.text("room_label"))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
-                            Text(entry.room)
+                            Text(lang.localizeLocationText(entry.room))
                                 .font(.body.bold())
                         }
                     }
@@ -159,7 +159,7 @@ struct ItemDetailView: View {
                                 Text(lang.text("container_label"))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
-                                Text(entry.container)
+                                Text(lang.localizeLocationText(entry.container))
                                     .font(.body.weight(.medium))
                             }
                         }
@@ -174,7 +174,7 @@ struct ItemDetailView: View {
                                 Text(lang.text("subspot_label"))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
-                                Text(entry.subSpot)
+                                Text(lang.localizeLocationText(entry.subSpot))
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
@@ -193,10 +193,12 @@ struct ItemDetailView: View {
     private var actionsSection: some View {
         VStack(spacing: 12) {
             // Big Found It Button
-            Button(action: { showFoundItSheet = true }) {
+            Button(action: {
+                showFoundItSheet = true
+            }) {
                 HStack(spacing: 10) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.title2)
+                        .font(.title3)
                     Text(lang.text("found_it_button"))
                         .font(.headline)
                 }
@@ -243,7 +245,7 @@ struct ItemDetailView: View {
             VStack(alignment: .leading, spacing: 12) {
                 // Category & Found Stats
                 HStack {
-                    Label(item.category, systemImage: "tag.fill")
+                    Label(lang.localizeCategory(item.category), systemImage: "tag.fill")
                         .font(.caption.bold())
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
@@ -253,7 +255,7 @@ struct ItemDetailView: View {
                     Spacer()
                     
                     if item.foundCount > 0 {
-                        Text("Found \(item.foundCount)x")
+                        Text(String(format: lang.text("found_count_badge"), item.foundCount))
                             .font(.caption.bold())
                             .foregroundStyle(.green)
                     }

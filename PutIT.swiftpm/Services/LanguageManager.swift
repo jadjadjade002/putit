@@ -59,6 +59,57 @@ class LanguageManager: ObservableObject {
         return dict[currentLanguage] ?? dict[.english] ?? key
     }
     
+    /// Dynamically translates saved room/container/spot preset names into current language
+    func localizeLocationText(_ text: String) -> String {
+        guard currentLanguage != .thai else { return text }
+        var result = text
+        
+        let mapping: [(thai: String, key: String)] = [
+            ("ห้องนอนใหญ่", "room_bedroom"),
+            ("ห้องนั่งเล่น", "room_living"),
+            ("ห้องครัว", "room_kitchen"),
+            ("หน้าบ้าน", "room_front"),
+            ("โถงทางเข้า", "room_front"),
+            ("ห้องทำงาน", "room_office"),
+            ("โรงรถ", "room_garage"),
+            ("ลิ้นชัก", "cont_drawer"),
+            ("โต๊ะทำงาน", "cont_desk"),
+            ("ตู้เซฟ", "cont_safe"),
+            ("ชั้นวางของ", "cont_shelf"),
+            ("ตู้เสื้อผ้า", "cont_closet"),
+            ("ที่แขวนผนัง", "cont_hanger"),
+            ("ชั้นบนสุด", "spot_top"),
+            ("ชั้นล่างสุด", "spot_bottom"),
+            ("ถาดไม้วางของ", "spot_tray"),
+            ("มุมซ้าย", "spot_left"),
+            ("มุมขวา", "spot_right"),
+            ("กล่องจัดระเบียบ", "spot_organizer")
+        ]
+        
+        for item in mapping {
+            if result.contains(item.thai) {
+                result = result.replacingOccurrences(of: item.thai, with: self.text(item.key))
+            }
+        }
+        return result
+    }
+    
+    /// Dynamically translates category name into current language
+    func localizeCategory(_ cat: String) -> String {
+        switch cat.lowercased() {
+        case "general", "ทั่วไป": return text("cat_general")
+        case "documents", "เอกสาร/พาสปอร์ต": return text("cat_docs")
+        case "keys & access", "keys", "กุญแจ": return text("cat_keys")
+        case "electronics", "ไอที/อุปกรณ์", "tech": return text("cat_electronics")
+        case "gaming", "gaming/tech", "เกม/ไอที": return text("cat_games")
+        case "tools", "เครื่องมือ": return text("cat_tools")
+        case "medicines", "medicine", "ยา/สุขภาพ": return text("cat_meds")
+        case "clothing", "เครื่องแต่งกาย": return text("cat_clothing")
+        case "valuables", "ของมีค่า": return text("cat_valuables")
+        default: return cat
+        }
+    }
+    
     private let strings: [String: [AppLanguage: String]] = [
         // App & Navigation
         "app_title": [
@@ -84,21 +135,21 @@ class LanguageManager: ObservableObject {
             .vietnamese: "Tìm kiếm đồ đạc (ví dụ: chìa khóa, laptop)"
         ],
         "remember_new_spot": [
-            .thai: "+ ถ่ายรูปจำที่เก็บของใหม่",
-            .english: "+ Remember New Item Spot",
-            .spanish: "+ Recordar nueva ubicación",
-            .french: "+ Mémoriser un endroit",
-            .german: "+ Neuen Ablageort merken",
-            .chinese: "+ 拍照记录存放位置",
-            .japanese: "+ 保管場所を撮影・記録",
-            .korean: "+ 보관 위치 기억하기",
-            .portuguese: "+ Lembrar novo local",
-            .italian: "+ Ricorda nuova posizione",
-            .russian: "+ Запомнить место",
-            .arabic: "+ تذكر مكان جديد",
-            .hindi: "+ नया स्थान याद रखें",
-            .turkish: "+ Yeni Konum Hatırla",
-            .vietnamese: "+ Lưu vị trí đồ vật mới"
+            .thai: "ถ่ายรูปจำที่เก็บของใหม่",
+            .english: "Remember New Item Spot",
+            .spanish: "Recordar nueva ubicación",
+            .french: "Mémoriser un endroit",
+            .german: "Neuen Ablageort merken",
+            .chinese: "拍照记录存放位置",
+            .japanese: "保管場所を撮影・記録",
+            .korean: "보관 위치 기억하기",
+            .portuguese: "Lembrar novo local",
+            .italian: "Ricorda nuova posizione",
+            .russian: "Запомнить место",
+            .arabic: "تذكر مكان جديد",
+            .hindi: "नया स्थान याद रखें",
+            .turkish: "Yeni Konum Hatırla",
+            .vietnamese: "Lưu vị trí đồ vật mới"
         ],
         "remember_sub": [
             .thai: "AI ตรวจจับสิ่งของ & ปักหมุดตำแหน่งภาพให้อัตโนมัติ",
@@ -185,23 +236,6 @@ class LanguageManager: ObservableObject {
             .turkish: "İlk eşyanızı kaydetmek için dokunun",
             .vietnamese: "Chạm để lưu đồ vật đầu tiên của bạn"
         ],
-        "no_search_match": [
-            .thai: "ไม่พบสิ่งของที่ตรงกับการค้นหา",
-            .english: "No items matched your search",
-            .spanish: "No se encontraron objetos",
-            .french: "Aucun objet trouvé",
-            .german: "Keine übereinstimmenden Gegenstände",
-            .chinese: "未找到匹配的物品",
-            .japanese: "一致するアイテムは見つかりませんでした",
-            .korean: "일치하는 물건을 찾을 수 없습니다",
-            .portuguese: "Nenhum item encontrado",
-            .italian: "Nessun oggetto corrispondente trovato",
-            .russian: "Ничего не найдено",
-            .arabic: "لم يتم العثور على أي نتائج",
-            .hindi: "कोई मिलती-जुलती वस्तु नहीं मिली",
-            .turkish: "Aramanızla eşleşen eşya bulunamadı",
-            .vietnamese: "Không tìm thấy đồ vật phù hợp"
-        ],
         "listening_voice": [
             .thai: "กำลังฟังเสียงพูด...",
             .english: "Listening to your voice...",
@@ -226,6 +260,11 @@ class LanguageManager: ObservableObject {
             .chinese: "全部", .japanese: "すべて", .korean: "전체", .portuguese: "Tudo", .italian: "Tutti",
             .russian: "Все", .arabic: "الكل", .hindi: "सभी", .turkish: "Tümü", .vietnamese: "Tất cả"
         ],
+        "cat_general": [
+            .thai: "ทั่วไป", .english: "General", .spanish: "General", .french: "Général", .german: "Allgemein",
+            .chinese: "常规", .japanese: "一般", .korean: "일반", .portuguese: "Geral", .italian: "Generale",
+            .russian: "Общее", .arabic: "عام", .hindi: "सामान्य", .turkish: "Genel", .vietnamese: "Chung"
+        ],
         "cat_keys": [
             .thai: "กุญแจ", .english: "Keys", .spanish: "Llaves", .french: "Clés", .german: "Schlüssel",
             .chinese: "钥匙", .japanese: "鍵", .korean: "열쇠", .portuguese: "Chaves", .italian: "Chiavi",
@@ -235,6 +274,11 @@ class LanguageManager: ObservableObject {
             .thai: "เอกสาร/พาสปอร์ต", .english: "Documents", .spanish: "Documentos", .french: "Documents", .german: "Dokumente",
             .chinese: "文件/护照", .japanese: "書類/パスポート", .korean: "서류/여권", .portuguese: "Documentos", .italian: "Documenti",
             .russian: "Документы", .arabic: "مستندات", .hindi: "दस्तावेज़", .turkish: "Belgeler", .vietnamese: "Tài liệu/Hộ chiếu"
+        ],
+        "cat_electronics": [
+            .thai: "ไอที/อุปกรณ์", .english: "Electronics", .spanish: "Electrónica", .french: "Électronique", .german: "Elektronik",
+            .chinese: "数码电子", .japanese: "電子機器/IT", .korean: "전자기기", .portuguese: "Eletrônicos", .italian: "Elettronica",
+            .russian: "Электроника", .arabic: "إلكترونيات", .hindi: "इलेक्ट्रॉनिक्स", .turkish: "Elektronik", .vietnamese: "Điện tử"
         ],
         "cat_games": [
             .thai: "เกม/ไอที", .english: "Gaming/Tech", .spanish: "Juegos/Tec", .french: "Jeux/Tech", .german: "Gaming/Tech",
@@ -250,6 +294,112 @@ class LanguageManager: ObservableObject {
             .thai: "เครื่องมือ", .english: "Tools", .spanish: "Herramientas", .french: "Outils", .german: "Werkzeuge",
             .chinese: "工具", .japanese: "工具", .korean: "도구/공구", .portuguese: "Ferramentas", .italian: "Strumenti",
             .russian: "Инструменты", .arabic: "أدوات", .hindi: "उपकरण", .turkish: "Aletler", .vietnamese: "Dụng cụ"
+        ],
+        "cat_clothing": [
+            .thai: "เครื่องแต่งกาย", .english: "Clothing", .spanish: "Ropa", .french: "Vêtements", .german: "Kleidung",
+            .chinese: "衣物", .japanese: "衣類", .korean: "의류", .portuguese: "Roupas", .italian: "Abbigliamento",
+            .russian: "Одежда", .arabic: "ملابس", .hindi: "कपड़े", .turkish: "Giyim", .vietnamese: "Quần áo"
+        ],
+        "cat_valuables": [
+            .thai: "ของมีค่า", .english: "Valuables", .spanish: "Objetos de valor", .french: "Objets de valeur", .german: "Wertsachen",
+            .chinese: "贵重物品", .japanese: "貴重品", .korean: "귀중품", .portuguese: "Valiosos", .italian: "Oggetti di valore",
+            .russian: "Ценности", .arabic: "أشياء ثمينة", .hindi: "कीमती सामान", .turkish: "Değerli Eşyalar", .vietnamese: "Đồ có giá trị"
+        ],
+        
+        // Rooms
+        "room_bedroom": [
+            .thai: "ห้องนอนใหญ่", .english: "Master Bedroom", .spanish: "Dormitorio", .french: "Chambre", .german: "Schlafzimmer",
+            .chinese: "主卧", .japanese: "寝室", .korean: "침실", .portuguese: "Quarto principal", .italian: "Camera",
+            .russian: "Спальня", .arabic: "غرفة النوم", .hindi: "बेडरूम", .turkish: "Yatak Odası", .vietnamese: "Phòng ngủ"
+        ],
+        "room_living": [
+            .thai: "ห้องนั่งเล่น", .english: "Living Room", .spanish: "Sala", .french: "Salon", .german: "Wohnzimmer",
+            .chinese: "客厅", .japanese: "リビング", .korean: "거실", .portuguese: "Sala de estar", .italian: "Soggiorno",
+            .russian: "Гостиная", .arabic: "غرفة المعيشة", .hindi: "लिविंग रूम", .turkish: "Oturma Odası", .vietnamese: "Phòng khách"
+        ],
+        "room_kitchen": [
+            .thai: "ห้องครัว", .english: "Kitchen", .spanish: "Cocina", .french: "Cuisine", .german: "Küche",
+            .chinese: "厨房", .japanese: "キッチン", .korean: "주방", .portuguese: "Cozinha", .italian: "Cucina",
+            .russian: "Кухня", .arabic: "المطبخ", .hindi: "रसोई", .turkish: "Mutfak", .vietnamese: "Nhà bếp"
+        ],
+        "room_front": [
+            .thai: "หน้าบ้าน/โถงทางเข้า", .english: "Entryway", .spanish: "Entrada", .french: "Entrée", .german: "Eingangsbereich",
+            .chinese: "玄关", .japanese: "玄関", .korean: "현관", .portuguese: "Entrada", .italian: "Ingresso",
+            .russian: "Прихожая", .arabic: "المدخل", .hindi: "प्रवेश द्वार", .turkish: "Antre", .vietnamese: "Cửa vào"
+        ],
+        "room_office": [
+            .thai: "ห้องทำงาน", .english: "Home Office", .spanish: "Oficina", .french: "Bureau", .german: "Arbeitszimmer",
+            .chinese: "书房/工作间", .japanese: "書斎/仕事部屋", .korean: "서재/작업실", .portuguese: "Escritório", .italian: "Studio",
+            .russian: "Кабинет", .arabic: "المكتب", .hindi: "अध्ययन कक्ष", .turkish: "Çalışma Odası", .vietnamese: "Phòng làm việc"
+        ],
+        "room_garage": [
+            .thai: "โรงรถ", .english: "Garage", .spanish: "Garaje", .french: "Garage", .german: "Garage",
+            .chinese: "车库", .japanese: "ガレージ", .korean: "차고", .portuguese: "Garagem", .italian: "Garage",
+            .russian: "Гараж", .arabic: "الكراج", .hindi: "गैरेज", .turkish: "Garaj", .vietnamese: "Nhà để xe"
+        ],
+        
+        // Containers / Furniture
+        "cont_drawer": [
+            .thai: "ลิ้นชัก", .english: "Drawer", .spanish: "Cajón", .french: "Tiroir", .german: "Schublade",
+            .chinese: "抽屉", .japanese: "引き出し", .korean: "서랍", .portuguese: "Gaveta", .italian: "Cassetto",
+            .russian: "Ящик", .arabic: "درج", .hindi: "दराज", .turkish: "Çekmece", .vietnamese: "Ngăn kéo"
+        ],
+        "cont_desk": [
+            .thai: "โต๊ะทำงาน", .english: "Desk / Table", .spanish: "Escritorio", .french: "Bureau", .german: "Schreibtisch",
+            .chinese: "桌子", .japanese: "デスク/机", .korean: "책상", .portuguese: "Mesa", .italian: "Scrivania",
+            .russian: "Стол", .arabic: "مكتب", .hindi: "मेज", .turkish: "Çalışma Masası", .vietnamese: "Bàn làm việc"
+        ],
+        "cont_safe": [
+            .thai: "ตู้เซฟ", .english: "Safe Box", .spanish: "Caja fuerte", .french: "Coffre-fort", .german: "Tresor",
+            .chinese: "保险箱", .japanese: "金庫", .korean: "금고", .portuguese: "Cofre", .italian: "Cassaforte",
+            .russian: "Сейф", .arabic: "خزنة", .hindi: "तिजोरी", .turkish: "Kasa", .vietnamese: "Két sắt"
+        ],
+        "cont_shelf": [
+            .thai: "ชั้นวางของ", .english: "Shelf", .spanish: "Estante", .french: "Étagère", .german: "Regal",
+            .chinese: "置物架", .japanese: "棚/シェルフ", .korean: "선반", .portuguese: "Prateleira", .italian: "Scaffale",
+            .russian: "Полка", .arabic: "رف", .hindi: "शेल्फ", .turkish: "Raf", .vietnamese: "Kệ đồ"
+        ],
+        "cont_closet": [
+            .thai: "ตู้เสื้อผ้า", .english: "Wardrobe / Closet", .spanish: "Armario", .french: "Armoire", .german: "Kleiderschrank",
+            .chinese: "衣柜", .japanese: "クローゼット", .korean: "옷장", .portuguese: "Guarda-roupa", .italian: "Armadio",
+            .russian: "Шкаф", .arabic: "خزانة ملابس", .hindi: "अलमारी", .turkish: "Gardırop", .vietnamese: "Tủ quần áo"
+        ],
+        "cont_hanger": [
+            .thai: "ที่แขวนผนัง", .english: "Wall Hanger", .spanish: "Perchero de pared", .french: "Porte-manteau", .german: "Wandhaken",
+            .chinese: "墙上挂钩", .japanese: "壁掛けフック", .korean: "벽걸이 후크", .portuguese: "Cabide de parede", .italian: "Appendiabiti",
+            .russian: "Настенный крючок", .arabic: "علاقة حائط", .hindi: "दीवार हैंगर", .turkish: "Duvar Askısı", .vietnamese: "Móc treo tường"
+        ],
+        
+        // SubSpots
+        "spot_top": [
+            .thai: "ชั้นบนสุด", .english: "Top Shelf", .spanish: "Estante superior", .french: "Étage supérieur", .german: "Oberstes Fach",
+            .chinese: "顶层", .japanese: "最上段", .korean: "맨 위층", .portuguese: "Prateleira superior", .italian: "Ripiano superiore",
+            .russian: "Верхняя полка", .arabic: "الرف العلوي", .hindi: "शीर्ष शेल्फ", .turkish: "En Üst Raf", .vietnamese: "Tầng trên cùng"
+        ],
+        "spot_bottom": [
+            .thai: "ชั้นล่างสุด", .english: "Bottom Shelf", .spanish: "Estante inferior", .french: "Étage inférieur", .german: "Unterstes Fach",
+            .chinese: "底层", .japanese: "最下段", .korean: "맨 아래층", .portuguese: "Prateleira inferior", .italian: "Ripiano inferiore",
+            .russian: "Нижняя полка", .arabic: "الرف السفلي", .hindi: "निचला शेल्फ", .turkish: "En Alt Raf", .vietnamese: "Tầng dưới cùng"
+        ],
+        "spot_tray": [
+            .thai: "ถาดไม้วางของ", .english: "Organizer Tray", .spanish: "Bandeja", .french: "Plateau", .german: "Ablageschale",
+            .chinese: "收纳托盘", .japanese: "トレー", .korean: "수납 트레이", .portuguese: "Bandeja organizadora", .italian: "Vassoio",
+            .russian: "Лоток", .arabic: "صينية تنظيم", .hindi: "ट्रे", .turkish: "Düzenleyici Tepsi", .vietnamese: "Khay để đồ"
+        ],
+        "spot_left": [
+            .thai: "มุมซ้าย", .english: "Left Side", .spanish: "Lado izquierdo", .french: "Côté gauche", .german: "Linke Seite",
+            .chinese: "左侧", .japanese: "左側", .korean: "왼쪽", .portuguese: "Lado esquerdo", .italian: "Lato sinistro",
+            .russian: "Слева", .arabic: "الجانب الأيسر", .hindi: "बाईं ओर", .turkish: "Sol Taraf", .vietnamese: "Góc trái"
+        ],
+        "spot_right": [
+            .thai: "มุมขวา", .english: "Right Side", .spanish: "Lado derecho", .french: "Côté droit", .german: "Rechte Seite",
+            .chinese: "右侧", .japanese: "右側", .korean: "오른쪽", .portuguese: "Lado direito", .italian: "Lato destro",
+            .russian: "Справа", .arabic: "الجانب الأيمن", .hindi: "दाईं ओर", .turkish: "Sağ Taraf", .vietnamese: "Góc phải"
+        ],
+        "spot_organizer": [
+            .thai: "กล่องจัดระเบียบ", .english: "Organizer Box", .spanish: "Caja organizadora", .french: "Boîte de rangement", .german: "Ordnungsbox",
+            .chinese: "整理盒", .japanese: "収納ボックス", .korean: "정리함", .portuguese: "Caixa organizadora", .italian: "Scatola organizer",
+            .russian: "Органайзер", .arabic: "صندوق تنظيم", .hindi: "ऑर्गनाइज़र बॉक्स", .turkish: "Düzenleyici Kutu", .vietnamese: "Hộp sắp xếp"
         ],
         
         // Card Badges
@@ -316,14 +466,6 @@ class LanguageManager: ObservableObject {
             .portuguese: "Outra foto", .italian: "Altra foto", .russian: "Другое фото", .arabic: "صورة أخرى",
             .hindi: "अन्य फोटो", .turkish: "Başka Fotoğraf", .vietnamese: "Chọn ảnh khác"
         ],
-        "skip_photo": [
-            .thai: "ข้ามรูปถ่าย (บันทึกเฉพาะข้อความ)", .english: "Skip photo (Text only)",
-            .spanish: "Omitir foto", .french: "Passer la photo", .german: "Foto überspringen",
-            .chinese: "跳过照片", .japanese: "写真をスキップ", .korean: "사진 건너뛰기",
-            .portuguese: "Pular foto", .italian: "Salta foto", .russian: "Пропустить фото",
-            .arabic: "تخطي الصورة", .hindi: "फोटो छोड़ें", .turkish: "Fotoğrafı Atla",
-            .vietnamese: "Bỏ qua ảnh"
-        ],
         "cancel": [
             .thai: "ยกเลิก", .english: "Cancel", .spanish: "Cancelar", .french: "Annuler", .german: "Abbrechen",
             .chinese: "取消", .japanese: "キャンセル", .korean: "취소", .portuguese: "Cancelar", .italian: "Annulla",
@@ -338,6 +480,11 @@ class LanguageManager: ObservableObject {
             .thai: "เสร็จ", .english: "Done", .spanish: "Listo", .french: "OK", .german: "Fertig",
             .chinese: "完成", .japanese: "完了", .korean: "완료", .portuguese: "OK", .italian: "Fine",
             .russian: "Готово", .arabic: "تم", .hindi: "पूर्ण", .turkish: "Tamam", .vietnamese: "Xong"
+        ],
+        "back": [
+            .thai: "ย้อนกลับ", .english: "Back", .spanish: "Atrás", .french: "Retour", .german: "Zurück",
+            .chinese: "返回", .japanese: "戻る", .korean: "뒤로", .portuguese: "Voltar", .italian: "Indietro",
+            .russian: "Назад", .arabic: "رجوع", .hindi: "वापस", .turkish: "Geri", .vietnamese: "Quay lại"
         ],
         
         // Form details
@@ -424,23 +571,8 @@ class LanguageManager: ObservableObject {
             .chinese: "当前位置", .japanese: "現在の保管場所", .korean: "현재 위치", .portuguese: "Local atual", .italian: "Posizione attuale",
             .russian: "Текущее место", .arabic: "الموقع الحالي", .hindi: "वर्तमान स्थान", .turkish: "Mevcut Konum", .vietnamese: "Vị trí hiện tại"
         ],
-        "room_label": [
-            .thai: "ห้อง:", .english: "Room:", .spanish: "Habitación:", .french: "Pièce:", .german: "Raum:",
-            .chinese: "房间:", .japanese: "部屋:", .korean: "방:", .portuguese: "Cômodo:", .italian: "Stanza:",
-            .russian: "Комната:", .arabic: "الغرفة:", .hindi: "कमरा:", .turkish: "Oda:", .vietnamese: "Phòng:"
-        ],
-        "container_label": [
-            .thai: "ที่เก็บ:", .english: "Storage:", .spanish: "Mueble:", .french: "Meuble:", .german: "Möbel:",
-            .chinese: "收纳:", .japanese: "保管場所:", .korean: "수납:", .portuguese: "Móvel:", .italian: "Mobile:",
-            .russian: "Мебель:", .arabic: "الأثاث:", .hindi: "फर्नीचर:", .turkish: "Mobilya:", .vietnamese: "Nơi cất:"
-        ],
-        "subspot_label": [
-            .thai: "จุดย่อย:", .english: "Spot:", .spanish: "Punto:", .french: "Emplacement:", .german: "Stelle:",
-            .chinese: "细节:", .japanese: "詳細:", .korean: "세부:", .portuguese: "Ponto:", .italian: "Punto:",
-            .russian: "Угол:", .arabic: "الموقع:", .hindi: "स्थान:", .turkish: "Alt nokta:", .vietnamese: "Chi tiết:"
-        ],
         "found_it_button": [
-            .thai: "หาเจอแล้ว! (Found It)", .english: "Found It!", .spanish: "¡Encontrado!", .french: "Trouvé !", .german: "Gefunden!",
+            .thai: "หาเจอแล้ว!", .english: "Found It!", .spanish: "¡Encontrado!", .french: "Trouvé !", .german: "Gefunden!",
             .chinese: "找到了！", .japanese: "見つかりました！", .korean: "찾았습니다!", .portuguese: "Encontrei!", .italian: "Trovato!",
             .russian: "Найдено!", .arabic: "وجدتُه!", .hindi: "मिल गया!", .turkish: "Buldum!", .vietnamese: "Đã tìm thấy!"
         ],
@@ -525,18 +657,18 @@ class LanguageManager: ObservableObject {
             .russian: "Собрано", .arabic: "تم التجهيز", .hindi: "पैक किया", .turkish: "Hazırlandı", .vietnamese: "Đã chuẩn bị"
         ],
         "add_pack_item": [
-            .thai: "+ เพิ่มของในรายการนี้", .english: "+ Add Item to Pack", .spanish: "+ Añadir objeto",
-            .french: "+ Ajouter un objet", .german: "+ Gegenstand hinzufügen", .chinese: "+ 添加物品到清单",
-            .japanese: "+ アイテムを追加", .korean: "+ 물건 추가", .portuguese: "+ Adicionar item",
-            .italian: "+ Aggiungi oggetto", .russian: "+ Добавить вещь", .arabic: "+ إضافة عنصر",
-            .hindi: "+ वस्तु जोड़ें", .turkish: "+ Eşya Ekle", .vietnamese: "+ Thêm đồ vật"
+            .thai: "เพิ่มของในรายการนี้", .english: "Add Item to Pack", .spanish: "Añadir objeto",
+            .french: "Ajouter un objet", .german: "Gegenstand hinzufügen", .chinese: "添加物品到清单",
+            .japanese: "アイテムを追加", .korean: "물건 추가", .portuguese: "Adicionar item",
+            .italian: "Aggiungi oggetto", .russian: "Добавить вещь", .arabic: "إضافة عنصر",
+            .hindi: "वस्तु जोड़ें", .turkish: "Eşya Ekle", .vietnamese: "Thêm đồ vật"
         ],
         "new_pack_set": [
-            .thai: "+ เซ็ตของใหม่", .english: "+ New Pack Set", .spanish: "+ Nuevo paquete",
-            .french: "+ Nouveau set", .german: "+ Neues Set", .chinese: "+ 新建清单",
-            .japanese: "+ 新規セット", .korean: "+ 새 세트", .portuguese: "+ Novo pacote",
-            .italian: "+ Nuovo set", .russian: "+ Новый набор", .arabic: "+ مجموعة جديدة",
-            .hindi: "+ नया सेट", .turkish: "+ Yeni Set", .vietnamese: "+ Bộ mới"
+            .thai: "เซ็ตของใหม่", .english: "New Pack Set", .spanish: "Nuevo paquete",
+            .french: "Nouveau set", .german: "Neues Set", .chinese: "新建清单",
+            .japanese: "新規セット", .korean: "새 세트", .portuguese: "Novo pacote",
+            .italian: "Nuovo set", .russian: "Новый набор", .arabic: "مجموعة جديدة",
+            .hindi: "नया सेट", .turkish: "Yeni Set", .vietnamese: "Bộ mới"
         ],
         "new_pack_set_title": [
             .thai: "สร้างเซ็ตเตรียมของใหม่", .english: "Create New Pack Set", .spanish: "Crear nuevo paquete",
@@ -563,6 +695,76 @@ class LanguageManager: ObservableObject {
             .hindi: "तैयार करने वाली वस्तु", .turkish: "Hazırlanacak eşya", .vietnamese: "Tên đồ cần chuẩn bị"
         ],
         
+        // Demo Guide Subtitles
+        "guide_step1_desc": [
+            .thai: "ถ่ายรูปสิ่งของ AI จะตรวจจับและปักหมุดตำแหน่งให้อัตโนมัติ",
+            .english: "Snap a photo; AI detects the item & auto-places the visual pin.",
+            .spanish: "Toma una foto; la IA detecta y coloca el pin automáticamente.",
+            .french: "Prenez une photo ; l'IA détecte l'objet et place l'épingle.",
+            .german: "Foto aufnehmen; KI erkennt das Objekt und setzt den Pin automatisch.",
+            .chinese: "拍摄照片，AI将自动识别物品并定位图钉位置。",
+            .japanese: "写真を撮るとAIが物体を認識し、自動でピン留めします。",
+            .korean: "사진을 촬영하면 AI가 물건을 감지하고 자동으로 핀을 고정합니다.",
+            .portuguese: "Tire uma foto; a IA detecta o item e fixa o ponto automaticamente.",
+            .italian: "Scatta una foto; l'IA rileva l'oggetto e posiziona il pin automaticamente.",
+            .russian: "Сделайте фото; ИИ распознает вещь и установит метку.",
+            .arabic: "التقط صورة؛ يتعرف الذكاء الاصطناعي على العنصر ويضع النقطة تلقائياً.",
+            .hindi: "फोटो लें; AI वस्तु को पहचानकर ऑटो-पिन लगा देगा।",
+            .turkish: "Fotoğraf çekin; Yapay Zeka eşyayı algılar ve iğneyi otomatik yerleştirir.",
+            .vietnamese: "Chụp ảnh; AI sẽ nhận diện đồ vật và tự động ghim vị trí."
+        ],
+        "guide_step2_desc": [
+            .thai: "ระบบจัดของอัจฉริยะ ดึงรูปและตำแหน่งของที่ต้องเตรียมทันที",
+            .english: "Smart pack checklist with direct photo anchors for quick retrieval.",
+            .spanish: "Lista inteligente con fotos y ubicaciones para empacar rápido.",
+            .french: "Liste intelligente avec photos et emplacements pour préparer rapidement.",
+            .german: "Intelligente Packliste mit Fotohinweisen für schnelles Auffinden.",
+            .chinese: "智能准备清单，直接展示存放照片与位置。",
+            .japanese: "持ち物リストから保管場所の写真と位置を即座に確認できます。",
+            .korean: "준비물 체크리스트에서 보관 사진과 위치를 즉시 확인합니다.",
+            .portuguese: "Lista inteligente com fotos e locais para preparar rapidamente.",
+            .italian: "Lista intelligente con foto e posizioni per preparare subito.",
+            .russian: "Умный чек-лист с фото и местами для быстрого сбора.",
+            .arabic: "قائمة تجهيز ذكية تعرض صور وأماكن الأشياء فوراً.",
+            .hindi: "तैयारी सूची में वस्तु का फोटो और स्थान तुरंत देखें।",
+            .turkish: "Hızlı toplama için fotoğraflı ve konumlu akıllı paket listesi.",
+            .vietnamese: "Danh sách thông minh hiển thị ảnh và vị trí để chuẩn bị nhanh."
+        ],
+        "guide_step3_desc": [
+            .thai: "ค้นหาด้วยเสียงพูดภาษาธรรมชาติ ค้นเจอทันที",
+            .english: "Instant voice search with natural Thai/multilingual phonetic matching.",
+            .spanish: "Búsqueda por voz instantánea con reconocimiento fonético.",
+            .french: "Recherche vocale instantanée avec correspondance phonétique.",
+            .german: "Sofortige Sprachsuche mit phonetischem Abgleich.",
+            .chinese: "支持自然语音搜索，即说即搜。",
+            .japanese: "自然な音声検索で探している物を一瞬で見つけます。",
+            .korean: "자연스러운 음성 검색으로 즉시 물건을 찾습니다.",
+            .portuguese: "Busca por voz instantânea com correspondência fonética.",
+            .italian: "Ricerca vocale istantanea con corrispondenza fonetica.",
+            .russian: "Мгновенный голосовой поиск вещей.",
+            .arabic: "بحث صوتي فوري باللغة الطبيعية.",
+            .hindi: "ध्वनि से तुरंत वस्तु खोजें।",
+            .turkish: "Doğal dille anında sesli arama.",
+            .vietnamese: "Tìm kiếm bằng giọng nói tức thì."
+        ],
+        "guide_step4_desc": [
+            .thai: "บันทึกและติดตามประวัติการย้ายที่เก็บย้อนหลัง",
+            .english: "Track and visualize complete location history over time.",
+            .spanish: "Registra y sigue el historial de movimientos.",
+            .french: "Enregistrez et suivez l'historique des déplacements.",
+            .german: "Vollständigen Umzugs- und Standortverlauf nachverfolgen.",
+            .chinese: "记录并追踪物品的历史移动轨迹。",
+            .japanese: "保管場所の移動履歴を記録し、いつでも振り返れます。",
+            .korean: "보관 위치 이동 기록을 저장하고 추적합니다.",
+            .portuguese: "Registre e acompanhe o histórico de mudanças de local.",
+            .italian: "Registra e traccia la cronologia degli spostamenti.",
+            .russian: "История перемещения вещей и прошлых мест.",
+            .arabic: "سجل وتتبع تاريخ تنقل الأماكن.",
+            .hindi: "स्थान बदलने का पूरा इतिहास देखें।",
+            .turkish: "Konum taşıma geçmişini kaydedin ve takip edin.",
+            .vietnamese: "Ghi lại và theo dõi lịch sử di chuyển đồ vật."
+        ],
+        
         // Settings & Guide
         "settings_title": [
             .thai: "ตั้งค่า", .english: "Settings", .spanish: "Ajustes", .french: "Réglages", .german: "Einstellungen",
@@ -581,6 +783,13 @@ class LanguageManager: ObservableObject {
             .italian: "Guida demo", .russian: "Руководство", .arabic: "دليل العرض",
             .hindi: "डेमो गाइड", .turkish: "Demo Kılavuzu", .vietnamese: "Hướng dẫn"
         ],
+        "demo_data_header": [
+            .thai: "ข้อมูลตัวอย่าง", .english: "Demo Data", .spanish: "Datos de demo",
+            .french: "Données de démo", .german: "Demo-Daten", .chinese: "演示数据",
+            .japanese: "デモデータ", .korean: "데모 데이터", .portuguese: "Dados de demo",
+            .italian: "Dati demo", .russian: "Демо-данные", .arabic: "بيانات تجريبية",
+            .hindi: "डेमो डेटा", .turkish: "Demo Verileri", .vietnamese: "Dữ liệu mẫu"
+        ],
         "reset_data": [
             .thai: "โหลดข้อมูลตัวอย่างสำหรับสาธิต", .english: "Reload Sample Demo Data", .spanish: "Restablecer datos",
             .french: "Réinitialiser données", .german: "Demo-Daten laden", .chinese: "载入演示数据",
@@ -595,12 +804,26 @@ class LanguageManager: ObservableObject {
             .italian: "Architettura", .russian: "Архитектура", .arabic: "البنية والخصوصية",
             .hindi: "संरचना", .turkish: "Mimari", .vietnamese: "Kiến trúc"
         ],
+        "network_status_label": [
+            .thai: "สถานะการเชื่อมต่อ", .english: "Network Status", .spanish: "Estado de red",
+            .french: "État du réseau", .german: "Netzwerkstatus", .chinese: "网络状态",
+            .japanese: "ネットワーク状態", .korean: "네트워크 상태", .portuguese: "Status da rede",
+            .italian: "Stato rete", .russian: "Состояние сети", .arabic: "حالة الشبكة",
+            .hindi: "नेटवर्क स्थिति", .turkish: "Ağ Durumu", .vietnamese: "Trạng thái mạng"
+        ],
         "offline_status": [
             .thai: "ออฟไลน์ 100% (On-Device)", .english: "100% Offline (On-Device)", .spanish: "100% Sin conexión",
             .french: "100% Hors ligne", .german: "100% Offline", .chinese: "100% 离线运行",
             .japanese: "100% オフライン", .korean: "100% 오프라인", .portuguese: "100% Offline",
             .italian: "100% Offline", .russian: "100% Офлайн", .arabic: "100% دون اتصال",
             .hindi: "100% ऑफ़लाइन", .turkish: "%100 Çevrimdışı", .vietnamese: "100% Ngoại tuyến"
+        ],
+        "found_count_badge": [
+            .thai: "หาเจอ %d ครั้ง", .english: "Found %dx", .spanish: "Encontrado %dx",
+            .french: "Trouvé %d fois", .german: "%dx gefunden", .chinese: "找到 %d 次",
+            .japanese: "発見 %d回", .korean: "%d회 찾음", .portuguese: "Encontrado %dx",
+            .italian: "Trovato %dx", .russian: "Найдено %d раз", .arabic: "تم العثور عليه %d مرات",
+            .hindi: "%d बार मिला", .turkish: "%d kez bulundu", .vietnamese: "Đã tìm thấy %d lần"
         ]
     ]
 }

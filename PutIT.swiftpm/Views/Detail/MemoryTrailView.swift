@@ -2,15 +2,16 @@ import SwiftUI
 
 struct MemoryTrailView: View {
     let item: ItemMemory
+    @ObservedObject private var lang = LanguageManager.shared
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // Header Banner
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Memory Trail")
+                    Text(lang.text("memory_trail_button"))
                         .font(.title2.bold())
-                    Text("Track the historical timeline of where '\(item.name)' was stored.")
+                    Text("\(lang.text("item_name_label")): \(item.name)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -45,7 +46,7 @@ struct MemoryTrailView: View {
                             // Entry Card
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
-                                    Text(entry.isCurrent ? "Current Location" : "Past Location")
+                                    Text(entry.isCurrent ? lang.text("current_location") : lang.text("past_spots"))
                                         .font(.caption.bold())
                                         .foregroundStyle(entry.isCurrent ? .green : .secondary)
                                         .padding(.horizontal, 8)
@@ -61,7 +62,7 @@ struct MemoryTrailView: View {
                                         .foregroundStyle(.secondary)
                                 }
                                 
-                                Text(entry.locationSummary)
+                                Text(lang.localizeLocationText(entry.locationSummary))
                                     .font(.headline)
                                 
                                 if !entry.note.isEmpty {
@@ -102,7 +103,7 @@ struct MemoryTrailView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
-        .navigationTitle("Location History")
+        .navigationTitle(lang.text("memory_trail_button"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

@@ -66,10 +66,17 @@ struct ItemCardVisualRow: View {
                     Image(systemName: "mappin.and.ellipse")
                         .font(.caption)
                         .foregroundStyle(.indigo)
-                    Text(result.item.currentEntry?.locationSummary ?? lang.text("no_location"))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    if let entry = result.item.currentEntry {
+                        Text(lang.localizeLocationText(entry.locationSummary))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    } else {
+                        Text(lang.text("no_location"))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
                 
                 if !result.matchReason.isEmpty && result.score > 0 {

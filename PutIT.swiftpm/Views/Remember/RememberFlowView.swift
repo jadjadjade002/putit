@@ -30,11 +30,20 @@ struct RememberFlowView: View {
     @State private var tagsText: String = ""
     @State private var note: String = ""
     
-    // Quick Presets
-    let roomChips: [String] = ["ห้องนอนใหญ่", "ห้องนั่งเล่น", "ห้องครัว", "หน้าบ้าน", "ห้องทำงาน", "โรงรถ"]
-    let containerChips: [String] = ["ลิ้นชัก", "โต๊ะทำงาน", "ตู้เซฟ", "ชั้นวางของ", "ตู้เสื้อผ้า", "ที่แขวนผนัง"]
-    let subSpotChips: [String] = ["ชั้นบนสุด", "ชั้นล่างสุด", "ถาดไม้วางของ", "มุมซ้าย", "มุมขวา", "กล่องจัดระเบียบ"]
-    let categories: [String] = ["General", "Documents", "Keys & Access", "Electronics", "Tools", "Medicines", "Clothing", "Valuables"]
+    // Quick Presets with Localization Keys
+    let roomChipKeys: [String] = ["room_bedroom", "room_living", "room_kitchen", "room_front", "room_office", "room_garage"]
+    let containerChipKeys: [String] = ["cont_drawer", "cont_desk", "cont_safe", "cont_shelf", "cont_closet", "cont_hanger"]
+    let subSpotChipKeys: [String] = ["spot_top", "spot_bottom", "spot_tray", "spot_left", "spot_right", "spot_organizer"]
+    let categoryKeys: [(key: String, id: String)] = [
+        ("cat_general", "General"),
+        ("cat_docs", "Documents"),
+        ("cat_keys", "Keys & Access"),
+        ("cat_electronics", "Electronics"),
+        ("cat_tools", "Tools"),
+        ("cat_meds", "Medicines"),
+        ("cat_clothing", "Clothing"),
+        ("cat_valuables", "Valuables")
+    ]
     
     private var isSaveDisabled: Bool {
         itemName.trimmingCharacters(in: .whitespaces).isEmpty || room.trimmingCharacters(in: .whitespaces).isEmpty
@@ -59,9 +68,9 @@ struct RememberFlowView: View {
                         // 1. Photo & Visual Anchor Section
                         photoSectionView
                         
-                        // 2. Smart Spatial Recommendation (if available)
-                        if let rec = smartSpatialRecommendation, (room.isEmpty || container.isEmpty) {
-                            recommendationBanner(rec)
+                        // 2. Smart Recommendation Banner (If available)
+                        if let rec = smartSpatialRecommendation, room.isEmpty {
+                            smartRecommendationBanner(rec: rec)
                         }
                         
                         // 3. Item Details Form
@@ -121,31 +130,32 @@ struct RememberFlowView: View {
         }
     }
     
-    // MARK: - Photo & Visual Anchor Sub-View
+    // MARK: - Photo & Anchor Section
     private var photoSectionView: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 14) {
             if let image = pickedImage {
                 VStack(spacing: 12) {
-                    VisualAnchorPicker(
-                        image: image,
-                        anchorX: $anchorX,
-                        anchorY: $anchorY
-                    )
-                    .frame(height: 280)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+                    // Interactive Canvas with Visual Anchor Pin
+                    VisualAnchorPicker(image: image, anchorX: $anchorX, anchorY: $anchorY)
+                        .frame(height: 280)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
                     
-                    // AI Status & Prediction Chips
+                    // AI Status & Predictions Row
                     if isAnalyzingAI {
                         HStack(spacing: 8) {
                             ProgressView()
-                                .tint(Color.indigo)
-                            Text("Apple Vision AI กำลังวิเคราะห์และปักหมุด...")
-                                .font(.footnote.weight(.medium))
+                                .scaleEffect(0.8)
+                            Text("AI กำลังวิเคราะห์วัตถุในรูปภาพ...")
+                                .font(.caption.bold())
                                 .foregroundStyle(Color.indigo)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
                         .background(Color.indigo.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     } else if let result = aiResult {
@@ -261,12 +271,8 @@ struct RememberFlowView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 100)
                             .background(Color(uiColor: .secondarySystemGroupedBackground))
-                            .foregroundStyle(Color.indigo)
+                            .foregroundStyle(Color.primary)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Color.indigo.opacity(0.2), lineWidth: 1)
-                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -275,20 +281,20 @@ struct RememberFlowView: View {
         }
     }
     
-    // MARK: - Recommendation Banner
-    private func recommendationBanner(_ rec: (room: String, container: String, subSpot: String)) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "lightbulb.fill")
-                .foregroundStyle(Color.yellow)
+    // MARK: - Smart Recommendation Banner
+    private func smartRecommendationBanner(rec: (room: String, container: String, subSpot: String)) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "lightbulb.max.fill")
                 .font(.title3)
+                .foregroundStyle(Color.yellow)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(lang.text("smart_recommendation_title"))
                     .font(.caption.bold())
-                    .foregroundStyle(Color.secondary)
-                Text("\(rec.room) › \(rec.container)")
-                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.primary)
+                Text("\(rec.room) › \(rec.container)")
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
             }
             
             Spacer()
@@ -330,8 +336,8 @@ struct RememberFlowView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 
                 Picker(lang.text("item_name_label"), selection: $category) {
-                    ForEach(categories, id: \.self) { cat in
-                        Text(cat).tag(cat)
+                    ForEach(categoryKeys, id: \.id) { cat in
+                        Text(lang.text(cat.key)).tag(cat.id)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -344,14 +350,15 @@ struct RememberFlowView: View {
                     .foregroundStyle(Color.secondary)
                 
                 FlowLayout(spacing: 6) {
-                    ForEach(roomChips, id: \.self) { chip in
-                        Button(action: { room = chip }) {
-                            Text(chip)
+                    ForEach(roomChipKeys, id: \.self) { key in
+                        let chipText = lang.text(key)
+                        Button(action: { room = chipText }) {
+                            Text(chipText)
                                 .font(.caption.weight(.medium))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(room == chip ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground))
-                                .foregroundStyle(room == chip ? Color.white : Color.primary)
+                                .background(room == chipText ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground))
+                                .foregroundStyle(room == chipText ? Color.white : Color.primary)
                                 .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
@@ -372,14 +379,15 @@ struct RememberFlowView: View {
                     .foregroundStyle(Color.secondary)
                 
                 FlowLayout(spacing: 6) {
-                    ForEach(containerChips, id: \.self) { chip in
-                        Button(action: { container = chip }) {
-                            Text(chip)
+                    ForEach(containerChipKeys, id: \.self) { key in
+                        let chipText = lang.text(key)
+                        Button(action: { container = chipText }) {
+                            Text(chipText)
                                 .font(.caption.weight(.medium))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(container == chip ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground))
-                                .foregroundStyle(container == chip ? Color.white : Color.primary)
+                                .background(container == chipText ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground))
+                                .foregroundStyle(container == chipText ? Color.white : Color.primary)
                                 .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
@@ -400,14 +408,15 @@ struct RememberFlowView: View {
                     .foregroundStyle(Color.secondary)
                 
                 FlowLayout(spacing: 6) {
-                    ForEach(subSpotChips, id: \.self) { chip in
-                        Button(action: { subSpot = chip }) {
-                            Text(chip)
+                    ForEach(subSpotChipKeys, id: \.self) { key in
+                        let chipText = lang.text(key)
+                        Button(action: { subSpot = chipText }) {
+                            Text(chipText)
                                 .font(.caption.weight(.medium))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(subSpot == chip ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground))
-                                .foregroundStyle(subSpot == chip ? Color.white : Color.primary)
+                                .background(subSpot == chipText ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground))
+                                .foregroundStyle(subSpot == chipText ? Color.white : Color.primary)
                                 .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)

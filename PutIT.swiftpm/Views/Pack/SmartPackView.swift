@@ -299,7 +299,7 @@ struct PackItemRow: View {
                             Image(systemName: "mappin.and.ellipse")
                                 .font(.caption2)
                                 .foregroundStyle(.indigo)
-                            Text(entry.locationSummary)
+                            Text(lang.localizeLocationText(entry.locationSummary))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
