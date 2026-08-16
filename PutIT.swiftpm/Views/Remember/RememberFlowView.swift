@@ -113,6 +113,11 @@ struct RememberFlowView: View {
                     triggerAIAnalysis(image: img)
                 }
             }
+            .onChange(of: anchorX) { _, newX in
+                if let x = newX, let y = anchorY, !autoPinPlaced {
+                    triggerFocusedReScan(atPoint: CGPoint(x: x, y: y))
+                }
+            }
         }
     }
     
@@ -488,6 +493,24 @@ struct RememberFlowView: View {
                     self.category = top.category
                     if self.room.isEmpty { self.room = top.roomSuggestion }
                     if self.container.isEmpty { self.container = top.containerSuggestion }
+                }
+            }
+        }
+    }
+    
+    private func triggerFocusedReScan(atPoint pt: CGPoint) {
+        guard let img = pickedImage else { return }
+        Task {
+            let result = await OnDeviceVisionService.analyzeFocusedPoint(img, point: pt)
+            await MainActor.run {
+                self.aiResult = result
+                if let top = result.topPredictions.first {
+                    withAnimation {
+                        self.itemName = top.name.components(separatedBy: " (").first ?? top.name
+                        self.category = top.category
+                        if self.room.isEmpty { self.room = top.roomSuggestion }
+                        if self.container.isEmpty { self.container = top.containerSuggestion }
+                    }
                 }
             }
         }
